@@ -120,6 +120,16 @@ final class Equipe
         return $linhas;
     }
 
+    /**
+     * Todos os membros (consultores e Responsáveis) de todas as equipes.
+     *
+     * @return list<int>
+     */
+    public static function membrosDasEquipes(): array
+    {
+        return array_values(array_unique(array_column(self::vinculos(), 'users_id')));
+    }
+
     public static function usuarioEmEquipe(int $users_id): bool
     {
         return $users_id > 0 && self::vinculos(['users_id' => $users_id]) !== [];

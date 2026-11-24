@@ -5,6 +5,13 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-24
+
+### Changed
+
+- Com as equipes ligadas, o campo *Consultor* da proposta lista só quem o usuário pode escolher pela regra de atribuição (ele mesmo e, conforme o nível, os membros das equipes que gere ou de todas as equipes), ativos e com acesso à entidade da proposta. Antes, a lista trazia todos os usuários da entidade e a escolha errada só era recusada ao salvar. Com as equipes desligadas, nada muda.
+- A página de configuração avisa quando a categoria do chamado automático está em branco: se o GLPI exigir categoria em chamado atribuído, os chamados abertos pelo plugin não podem ser editados pela tela até alguém escolher uma.
+
 ## [1.3.0] - 2026-11-24
 
 ### Added
@@ -132,7 +139,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/tsathler/glpi-propostas/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/tsathler/glpi-propostas/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/tsathler/glpi-propostas/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/tsathler/glpi-propostas/compare/v1.1.0...v1.2.0

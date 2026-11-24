@@ -114,4 +114,39 @@ final class Visibilidade
 
         return ($direitos & self::EQUIPE) !== 0 && in_array($alvo, $membros_geridos, true);
     }
+
+    /**
+     * Quem pode aparecer no campo Consultor (a mesma regra de podeAtribuir, em lista).
+     * Null: sem restrição (equipes desligadas); o campo lista os usuários da entidade como antes.
+     *
+     * @param list<int> $membros_equipes Todos os membros de todas as equipes.
+     * @param list<int> $membros_geridos Membros das equipes que o usuário gere.
+     * @return list<int>|null
+     */
+    public static function consultoresPermitidos(
+        int $direitos,
+        int $usuario,
+        bool $equipes_ativas,
+        bool $usuario_em_equipe,
+        array $membros_equipes,
+        array $membros_geridos
+    ): ?array {
+        if (!$equipes_ativas) {
+            return null;
+        }
+        if ($usuario <= 0 || !self::temLeitura($direitos)) {
+            return [];
+        }
+
+        if (($direitos & self::TODAS) !== 0) {
+            $ids = array_merge([$usuario], $membros_equipes);
+        } else {
+            $ids = $usuario_em_equipe ? [$usuario] : [];
+            if (($direitos & self::EQUIPE) !== 0) {
+                $ids = array_merge($ids, $membros_geridos);
+            }
+        }
+
+        return array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+    }
 }

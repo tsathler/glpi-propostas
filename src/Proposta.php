@@ -456,9 +456,63 @@ class Proposta extends CommonDBTM
             'modelo'        => $this->getModelo(),
             'cnpj_consulta' => (bool) (\Config::getConfigurationValue('plugin:propostas', 'cnpj_consulta_ativa') ?? false),
             'cnpj_url'      => \Plugin::getWebDir('propostas') . '/ajax/cnpj.php',
+            'consultores'   => $this->opcoesConsultor(),
         ]);
 
         return true;
+    }
+
+    /**
+     * Opções do campo Consultor com as equipes ligadas: só quem a regra de atribuição aceita,
+     * ativo e com acesso à entidade da proposta, mais o consultor atual (para não sumir do campo).
+     * Null com as equipes desligadas: o campo lista os usuários da entidade, como antes.
+     *
+     * @return array<int, string>|null
+     */
+    private function opcoesConsultor(): ?array
+    {
+        $usuario  = Equipe::usuarioAtual();
+        $direitos = Equipe::direitosAtuais();
+        $ids = Visibilidade::consultoresPermitidos(
+            $direitos,
+            $usuario,
+            Equipe::ativas(),
+            Equipe::usuarioEmEquipe($usuario),
+            ($direitos & Visibilidade::TODAS) !== 0 ? Equipe::membrosDasEquipes() : [],
+            ($direitos & Visibilidade::EQUIPE) !== 0 ? Equipe::membrosGeridos($usuario) : []
+        );
+        if ($ids === null) {
+            return null;
+        }
+
+        // Proposta nova: a entidade padrão do plugin, se for usada na criação.
+        $entidade = (int) $this->fields['entities_id'];
+        if ($this->isNewItem()) {
+            $padrao = (int) (\Config::getConfigurationValue('plugin:propostas', 'propostas_entities_id') ?? -1);
+            if ($padrao >= 0 && Session::haveAccessToEntity($padrao)) {
+                $entidade = $padrao;
+            }
+        }
+
+        $opcoes = [];
+        $user = new \User();
+        foreach ($ids as $id) {
+            if (
+                $user->getFromDB($id)
+                && $user->fields['is_active']
+                && !$user->fields['is_deleted']
+                && in_array($entidade, \Profile_User::getUserEntities($id, true), false)
+            ) {
+                $opcoes[$id] = getUserName($id);
+            }
+        }
+        $atual = (int) ($this->fields['users_id_consultor'] ?? 0);
+        if ($atual > 0 && !isset($opcoes[$atual])) {
+            $opcoes[$atual] = getUserName($atual);
+        }
+        asort($opcoes, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $opcoes;
     }
 
     public function getModelo(): ?Modelo
