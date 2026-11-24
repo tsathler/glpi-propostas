@@ -128,6 +128,14 @@ function plugin_propostas_install(): bool
         ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation} ROW_FORMAT=DYNAMIC");
     }
 
+    // 0.4.0: ação automática diária que marca como Expirada a proposta enviada com o link vencido.
+    // register() não duplica se já existir.
+    CronTask::register('GlpiPlugin\\Propostas\\Proposta', 'expirar', DAY_TIMESTAMP, [
+        'comment' => 'Marca como expiradas as propostas enviadas que passaram da validade',
+        'mode'    => CronTask::MODE_EXTERNAL,
+        'state'   => CronTask::STATE_WAITING,
+    ]);
+
     // 0.3.0: notificações para o consultor (aberta, aceita, dúvida). Só cria o que não existir.
     GlpiPlugin\Propostas\NotificationTargetProposta::instalar();
 
@@ -189,6 +197,7 @@ function plugin_propostas_uninstall(): bool
     global $DB;
 
     GlpiPlugin\Propostas\NotificationTargetProposta::desinstalar();
+    CronTask::unregister('propostas');
 
     $tabelas = [
         'glpi_plugin_propostas_tentativas',

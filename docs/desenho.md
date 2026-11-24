@@ -36,7 +36,12 @@ Status: Rascunho → Enviada → Visualizada → Aceita / Com dúvida / Expirada
    - Tabelas: `respostas` (aceite e dúvida), `acessos` (aberturas anônimas) e `tentativas` (limite de 10 envios por IP por hora, só o hash do IP).
    - CSRF: os POST passam pela checagem do próprio GLPI (`CheckCsrfListener`); a página inclui `_glpi_csrf_token`.
    - GLPI 11.0.4: o `PluginsRouterListener` não passa o método HTTP ao roteador de plugins, então rotas com `methods: ['POST']` nunca casam. As rotas `/aceitar` e `/duvida` não restringem o método e o controller confere o POST.
-4. **Acabamento:** expiração automática (ação automática), impressão/PDF, limite de tentativas por IP.
+4. **Uso no dia a dia** (0.4.0): ação automática `expirar` (`Proposta::cronExpirar()`, diária, modo CLI) e botão **Duplicar** (`Proposta::duplicar()`). Impressão/PDF já é feita pelo navegador e o limite por IP entrou na 0.3.0. Ficaram de fora: catálogo de itens (opcional) e revisão dos textos da página pública e dos e-mails (depende do texto de vocês).
+5. **Qualidade:** testes automáticos (CPF, totais, hash), CI no GitHub Actions, teste de atualização 0.1.0 → atual e de desinstalação.
+6. **Staging antes de produção:** dono da pasta de cache, URL de acesso, teste controlado do e-mail, limpeza dos dados de teste.
+7. **Versão 1.0.0:** tag anotada e GitHub Release com o zip.
+8. **Produção (só interna):** backup, instalação, perfis, teste interno.
+9. **Página pública para fora (última):** endereço, DNS, certificado, `server` do Nginx (abaixo), configuração do endereço externo e monitoramento.
 
 ## Nginx (rascunho, ainda não aplicado)
 

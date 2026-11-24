@@ -91,6 +91,11 @@
                         <i class="ti ti-lock-open"></i> {{ __('Reabrir para edição', 'propostas') }}
                      </button>
                   {% endif %}
+                  {% if pode_duplicar %}
+                     <button type="submit" name="duplicar" value="1" class="btn btn-outline-secondary">
+                        <i class="ti ti-copy"></i> {{ __('Duplicar', 'propostas') }}
+                     </button>
+                  {% endif %}
                   {% if pode_cancelar %}
                      <button type="submit" name="cancelar" value="1" class="btn btn-outline-danger"
                              onclick="return confirm('{{ __('Cancelar a proposta e invalidar o link?', 'propostas')|e('js') }}');">

@@ -158,6 +158,7 @@ class Proposta extends CommonDBTM
             'pode_gerar'    => $this->podeGerarLink(),
             'pode_reabrir'  => $this->podeReabrir(),
             'pode_cancelar' => $this->podeCancelar(),
+            'pode_duplicar' => !$this->isNewItem() && Session::haveRight(self::$rightname, CREATE),
         ]);
 
         return true;
@@ -189,6 +190,107 @@ class Proposta extends CommonDBTM
             self::STATUS_ACEITA,
             self::STATUS_CANCELADA,
         ], true);
+    }
+
+    /* ------------------------------------------------------------------
+     * Expiração automática (Configurar > Ações automáticas > expirar)
+     * ------------------------------------------------------------------ */
+
+    /** Status que ainda esperam resposta do cliente e, portanto, podem expirar. */
+    private const STATUS_EM_ABERTO = [self::STATUS_ENVIADA, self::STATUS_VISUALIZADA, self::STATUS_DUVIDA];
+
+    public static function cronInfo($name)
+    {
+        if ($name === 'expirar') {
+            return ['description' => __('Marca como expiradas as propostas enviadas que passaram da validade', 'propostas')];
+        }
+
+        return [];
+    }
+
+    /**
+     * Enviada / Visualizada / Com dúvida com o link vencido -> Expirada.
+     * O link já para de funcionar no vencimento; aqui só o status acompanha.
+     *
+     * @return int 1 se expirou alguma proposta, 0 se não havia nada a fazer
+     */
+    public static function cronExpirar(\CronTask $task): int
+    {
+        global $DB;
+
+        $vencidas = $DB->request([
+            'SELECT' => ['id'],
+            'FROM'   => self::getTable(),
+            'WHERE'  => [
+                'status'       => self::STATUS_EM_ABERTO,
+                'NOT'          => ['token_expira' => null],
+                'token_expira' => ['<', date('Y-m-d H:i:s')],
+            ],
+        ]);
+
+        $expiradas = 0;
+        foreach ($vencidas as $row) {
+            $proposta = new self();
+            if (
+                $proposta->getFromDB((int) $row['id'])
+                && $proposta->update(['id' => $proposta->getID(), '_acao_interna' => true, 'status' => self::STATUS_EXPIRADA])
+            ) {
+                $expiradas++;
+                $task->log(sprintf('Proposta %s (versão %d) expirada', $proposta->getNumero(), (int) $proposta->fields['versao']));
+            }
+        }
+        $task->addVolume($expiradas);
+
+        return $expiradas > 0 ? 1 : 0;
+    }
+
+    /* ------------------------------------------------------------------
+     * Duplicar
+     * ------------------------------------------------------------------ */
+
+    /**
+     * Cria um rascunho novo com os dados e os itens desta proposta.
+     * Não copia status, versão, link, chamado vinculado, respostas nem acessos.
+     *
+     * @return int|false id da proposta nova
+     */
+    public function duplicar(): int|false
+    {
+        $nova = new self();
+        $id = $nova->add([
+            'entities_id'        => $this->fields['entities_id'],
+            'is_recursive'       => $this->fields['is_recursive'],
+            'name'               => sprintf(__('%s (cópia)', 'propostas'), $this->fields['name']),
+            'solicitante'        => $this->fields['solicitante'],
+            'users_id_consultor' => Session::getLoginUserID() ?: $this->fields['users_id_consultor'],
+            'tickets_id'         => 0,
+            'data_emissao'       => date('Y-m-d'),
+            'validade_dias'      => $this->fields['validade_dias'],
+            'aviso_previo_dias'  => $this->fields['aviso_previo_dias'],
+            'condicoes'          => $this->fields['condicoes'],
+        ]);
+        if (!$id) {
+            return false;
+        }
+
+        foreach (PropostaItem::getItensDaProposta($this->getID()) as $item) {
+            (new PropostaItem())->add([
+                PropostaItem::$items_id => $id,
+                'tipo'                  => $item['tipo'],
+                'name'                  => $item['name'],
+                'quantidade'            => $item['quantidade'],
+                'valor_unitario'        => $item['valor_unitario'],
+                'desconto_pct'          => $item['desconto_pct'],
+                'ordem'                 => $item['ordem'],
+            ]);
+        }
+
+        Session::addMessageAfterRedirect(htmlescape(sprintf(
+            __('Proposta duplicada a partir da nº %s. Confira os dados e os itens antes de gerar o link.', 'propostas'),
+            $this->getNumero()
+        )));
+
+        return (int) $id;
     }
 
     /**

@@ -7,6 +7,13 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ### Added
 
+- Ação automática diária **expirar** (Configurar > Ações automáticas): marca como *Expirada* as propostas *Enviada*, *Visualizada* ou *Com dúvida* cujo link já venceu.
+- Botão **Duplicar**: cria um rascunho com os dados, condições e itens da proposta, emissão de hoje e o usuário atual como consultor. Não copia chamado vinculado, status, versão, link, respostas nem acessos.
+
+## [0.3.0]
+
+### Added
+
 - **Aceitar proposta** na página pública: nome completo, CPF (com conferência dos dígitos) e declaração. Grava data, IP, navegador, CPF cifrado com a chave do GLPI (e mascarado) e o SHA-256 dos valores aceitos; a página passa a mostrar "Proposta aceita" com o código de verificação.
 - **Tenho dúvidas** na página pública: nome e mensagem; status *Com dúvida*.
 - Aceite e dúvida viram acompanhamento **privado** no chamado vinculado, sem disparar as notificações do chamado.
