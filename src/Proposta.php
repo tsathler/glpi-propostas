@@ -444,9 +444,10 @@ class Proposta extends CommonDBTM
     public function duplicar(): int|false
     {
         $nova = new self();
+        $entidade = $this->entidadeDeTrabalho();
         $id = $nova->add([
-            'entities_id'        => $this->fields['entities_id'],
-            'is_recursive'       => $this->fields['is_recursive'],
+            'entities_id'        => $entidade,
+            'is_recursive'       => $entidade === (int) $this->fields['entities_id'] ? $this->fields['is_recursive'] : 0,
             'name'               => sprintf(__('%s (cópia)', 'propostas'), $this->fields['name']),
             'solicitante'        => $this->fields['solicitante'],
             'empresa_razao_social'        => $this->fields['empresa_razao_social'],
@@ -560,7 +561,7 @@ class Proposta extends CommonDBTM
         $empresa = trim((string) $this->fields['empresa_razao_social']);
 
         $input = [
-            'entities_id'       => (int) $this->fields['entities_id'],
+            'entities_id'       => $this->entidadeDeTrabalho(),
             'type'              => \Ticket::DEMAND_TYPE,
             'name'              => sprintf('Proposta nº %s - %s', $this->getNumero(), $empresa !== '' ? $empresa : (string) $this->fields['name']),
             'content'           => sprintf(
@@ -1115,6 +1116,37 @@ class Proposta extends CommonDBTM
     public function getTotaisFormatados(): array
     {
         return array_map(static fn (float $v): string => Html::formatNumber($v), $this->getTotais());
+    }
+
+    /**
+     * Proposta com aceite não pode ser excluída: levaria junto a prova do aceite
+     * (respostas, código de verificação, acessos e histórico).
+     */
+    public function canPurgeItem(): bool
+    {
+        if (!parent::canPurgeItem()) {
+            return false;
+        }
+        return !$this->temAceite();
+    }
+
+    public function temAceite(): bool
+    {
+        return countElementsInTable(Resposta::TABELA, [
+            'plugin_propostas_propostas_id' => $this->getID(),
+            'tipo'                          => Resposta::TIPO_ACEITE,
+        ]) > 0;
+    }
+
+    /**
+     * Entidade em que o usuário pode criar a cópia ou o chamado: a da proposta, se ele tem acesso
+     * direto a ela; senão (proposta recursiva de uma entidade acima), a entidade ativa.
+     */
+    private function entidadeDeTrabalho(): int
+    {
+        $entidade = (int) $this->fields['entities_id'];
+
+        return Session::haveAccessToEntity($entidade) ? $entidade : (int) Session::getActiveEntity();
     }
 
     public function cleanDBonPurge(): void

@@ -40,6 +40,10 @@ if (isset($_POST['add'])) {
     $proposta->update($_POST);
     Html::back();
 } elseif (isset($_POST['purge'])) {
+    if ($proposta->getFromDB((int) $_POST['id']) && $proposta->temAceite()) {
+        Session::addMessageAfterRedirect(htmlescape(__('Proposta com aceite registrado não pode ser excluída. Use "Cancelar" se ela não vale mais.', 'propostas')), false, ERROR);
+        Html::back();
+    }
     $proposta->check($_POST['id'], PURGE);
     $proposta->delete($_POST, true);
     $proposta->redirectToList();

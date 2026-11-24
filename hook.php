@@ -289,12 +289,17 @@ function plugin_propostas_install(): bool
             ]);
         }
     }
-    // 1.1.0: quem atualiza ganha a coluna "Razão social" na lista de propostas.
-    $proposta = 'GlpiPlugin\\Propostas\\Proposta';
-    if (countElementsInTable('glpi_displaypreferences', ['itemtype' => $proposta, 'users_id' => 0, 'num' => 10]) === 0) {
-        $DB->insert('glpi_displaypreferences', [
-            'itemtype' => $proposta, 'num' => 10, 'rank' => 99, 'users_id' => 0, 'interface' => 'central',
-        ]);
+    // 1.1.0: quem atualiza ganha a coluna "Razão social" na lista de propostas. Uma vez só:
+    // se o administrador tirar a coluna depois, reinstalar não a devolve.
+    $marca = Config::getConfigurationValues('plugin:propostas', ['instalado_colunas_1_1']);
+    if (empty($marca['instalado_colunas_1_1'])) {
+        $proposta = 'GlpiPlugin\\Propostas\\Proposta';
+        if (countElementsInTable('glpi_displaypreferences', ['itemtype' => $proposta, 'users_id' => 0, 'num' => 10]) === 0) {
+            $DB->insert('glpi_displaypreferences', [
+                'itemtype' => $proposta, 'num' => 10, 'rank' => 99, 'users_id' => 0, 'interface' => 'central',
+            ]);
+        }
+        Config::setConfigurationValues('plugin:propostas', ['instalado_colunas_1_1' => '1']);
     }
 
     $migration->executeMigration();
@@ -359,10 +364,28 @@ function plugin_propostas_uninstall(): bool
     $DB->delete('glpi_displaypreferences', ['itemtype' => $itemtypes]);
     $DB->delete('glpi_logs', ['itemtype' => $itemtypes]);
 
+    // Pesquisas salvas das listas do plugin (e o que depende delas).
+    $pesquisas = array_column(iterator_to_array($DB->request([
+        'SELECT' => ['id'],
+        'FROM'   => 'glpi_savedsearches',
+        'WHERE'  => ['itemtype' => $itemtypes],
+    ]), false), 'id');
+    if ($pesquisas !== []) {
+        foreach (['glpi_savedsearches_users', 'glpi_savedsearches_alerts'] as $tabela) {
+            if ($DB->tableExists($tabela)) {
+                $DB->delete($tabela, ['savedsearches_id' => $pesquisas]);
+            }
+        }
+        $DB->delete('glpi_savedsearches', ['id' => $pesquisas]);
+    }
+
     ProfileRight::deleteProfileRights([PLUGIN_PROPOSTAS_RIGHT, PLUGIN_PROPOSTAS_RIGHT_MODELO]);
     unset($_SESSION['glpiactiveprofile'][PLUGIN_PROPOSTAS_RIGHT], $_SESSION['glpiactiveprofile'][PLUGIN_PROPOSTAS_RIGHT_MODELO]);
 
-    Config::deleteConfigurationValues('plugin:propostas', ['url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url', 'chamado_itilcategories_id', 'chamado_groups_id']);
+    Config::deleteConfigurationValues('plugin:propostas', [
+        'url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url', 'chamado_itilcategories_id', 'chamado_groups_id',
+        'instalado_notificacoes', 'instalado_colunas_1_1',
+    ]);
 
     return true;
 }

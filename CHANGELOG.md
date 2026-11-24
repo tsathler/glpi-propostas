@@ -16,6 +16,17 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - Limite de envios: grava antes de contar (envios simultâneos não furam o limite), conta o IPv6 pela rede /64 e não conta envio recusado pela validação.
 - No máximo 5 dúvidas por proposta a cada 24 horas.
 - O registro de acessos ao link grava no máximo uma linha por proposta, versão e IP a cada 10 minutos.
+- Link e CPF cifrados registrados no hook `secured_fields`: entram na troca de chave do GLPI (`glpi:security:change_key`) em vez de ficarem ilegíveis.
+- Nome e dúvida digitados pelo cliente vão como texto puro no e-mail ao consultor (antes, tags HTML viravam links e imagens no e-mail).
+- A busca de CNPJ não segue redirecionamentos.
+- Proposta com aceite registrado não pode ser excluída (a exclusão apagava a prova do aceite).
+
+### Fixed
+
+- Duplicar uma proposta recursiva de uma entidade acima, ou gerar o link dela, criava a cópia ou o chamado numa entidade sem acesso do usuário. Agora usa a entidade ativa.
+- Reinstalar (`plugin:install --force`) recriava notificação apagada, duplicava o modelo de notificação renomeado e devolvia a coluna "Razão social" retirada da lista. Agora isso é feito só uma vez.
+- Desinstalar deixava as pesquisas salvas das listas do plugin.
+- README: requisito "GLPI 11.x" (o 12 ainda não é aceito), dependência do cron do sistema para a expiração e aviso de que desinstalar apaga propostas e aceites.
 
 ## [1.2.0] - 2026-11-24
 

@@ -44,6 +44,7 @@ try {
         'timeout'         => 5,
         'connect_timeout' => 5,
         'http_errors'     => false,
+        'allow_redirects' => false,
         'headers'         => ['Accept' => 'application/json', 'User-Agent' => 'GLPI-Propostas'],
     ])->get($url);
 } catch (Throwable $e) {
