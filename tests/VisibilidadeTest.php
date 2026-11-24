@@ -99,4 +99,52 @@ final class VisibilidadeTest extends TestCase
         $this->assertFalse(V::podeAtribuir(V::TODAS, self::OUTRO, 0, false, false, []));
         $this->assertFalse(V::podeAtribuir(0, self::OUTRO, self::OUTRO, false, false, []));
     }
+
+    /** Todos os membros de todas as equipes (o gestor inclusive). */
+    private const TODOS_MEMBROS = [self::CONSULTOR_A, self::CONSULTOR_B, self::GESTOR];
+
+    public function testConsultoresSemEquipesNaoFiltra(): void
+    {
+        $this->assertNull(V::consultoresPermitidos(V::MINHAS, self::CONSULTOR_A, false, false, [], []));
+    }
+
+    public function testConsultoresPorNivel(): void
+    {
+        $this->assertSame([self::CONSULTOR_A], V::consultoresPermitidos(V::MINHAS, self::CONSULTOR_A, true, true, self::TODOS_MEMBROS, []));
+        $this->assertSame([], V::consultoresPermitidos(V::MINHAS, self::OUTRO, true, false, self::TODOS_MEMBROS, []), 'sem equipe');
+        $this->assertSame(
+            [self::GESTOR, self::CONSULTOR_A, self::CONSULTOR_B],
+            V::consultoresPermitidos(V::MINHAS | V::EQUIPE, self::GESTOR, true, true, self::TODOS_MEMBROS, self::DA_EQUIPE)
+        );
+        $this->assertSame(
+            [self::OUTRO, self::CONSULTOR_A, self::CONSULTOR_B, self::GESTOR],
+            V::consultoresPermitidos(V::MINHAS | V::TODAS, self::OUTRO, true, false, self::TODOS_MEMBROS, [])
+        );
+        $this->assertSame([], V::consultoresPermitidos(0, self::GESTOR, true, true, self::TODOS_MEMBROS, self::DA_EQUIPE), 'sem leitura');
+    }
+
+    /**
+     * A lista do campo e a validação ao salvar não podem divergir: quem aparece pode ser escolhido,
+     * e quem pode ser escolhido aparece.
+     */
+    public function testConsultoresBatemComPodeAtribuir(): void
+    {
+        $candidatos = [self::CONSULTOR_A, self::CONSULTOR_B, self::GESTOR, self::OUTRO];
+        $niveis = [V::MINHAS, V::MINHAS | V::EQUIPE, V::MINHAS | V::TODAS, V::EQUIPE, V::TODAS];
+
+        foreach ($niveis as $direitos) {
+            foreach ($candidatos as $usuario) {
+                $em_equipe = in_array($usuario, self::TODOS_MEMBROS, true);
+                $geridos = $usuario === self::GESTOR ? self::DA_EQUIPE : [];
+                $lista = V::consultoresPermitidos($direitos, $usuario, true, $em_equipe, self::TODOS_MEMBROS, $geridos);
+                foreach ($candidatos as $alvo) {
+                    $this->assertSame(
+                        V::podeAtribuir($direitos, $usuario, $alvo, true, in_array($alvo, self::TODOS_MEMBROS, true), $geridos),
+                        in_array($alvo, $lista, true),
+                        sprintf('direitos %d, usuário %d, alvo %d', $direitos, $usuario, $alvo)
+                    );
+                }
+            }
+        }
+    }
 }

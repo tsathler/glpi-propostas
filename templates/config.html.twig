@@ -61,6 +61,11 @@
       <div class="form-hint mb-3">
          {{ __('Ambos opcionais. Use categoria e grupo visíveis nas entidades onde as propostas são criadas (recursivos na entidade raiz, por exemplo).', 'propostas') }}
       </div>
+      {% if chamado_itilcategories_id <= 0 %}
+         <div class="alert alert-warning py-2 mb-3"><i class="ti ti-alert-triangle"></i>
+            {{ __('Sem categoria, os chamados abertos pelo plugin ficam sem categoria. Se o GLPI exigir categoria em chamado atribuído, esses chamados só poderão ser editados pela tela depois que alguém escolher uma. Recomendado: escolha uma categoria.', 'propostas') }}
+         </div>
+      {% endif %}
 
       <hr>
       <h4>{{ __('Equipes de consultores', 'propostas') }}</h4>

@@ -86,10 +86,18 @@
 
    <div class="col-12 mt-2"><h4 class="mb-0"><i class="ti ti-file-dollar"></i> {{ __('Proposta', 'propostas') }}</h4></div>
 
-   {{ fields.dropdownField('User', 'users_id_consultor', item.fields['users_id_consultor'], __('Consultor', 'propostas'), travado|merge({
-      right: 'all',
-      entity: item.fields['entities_id']
-   })) }}
+   {% if consultores is null %}
+      {{ fields.dropdownField('User', 'users_id_consultor', item.fields['users_id_consultor'], __('Consultor', 'propostas'), travado|merge({
+         right: 'all',
+         entity: item.fields['entities_id']
+      })) }}
+   {% else %}
+      {# Equipes ligadas: só quem este usuário pode pôr como consultor (em branco = ele mesmo, ao criar). #}
+      {{ fields.dropdownArrayField('users_id_consultor', item.fields['users_id_consultor'], consultores, __('Consultor', 'propostas'), travado|merge({
+         display_emptychoice: true,
+         helper: __('Só aparecem os consultores que você pode escolher, pelas equipes.', 'propostas')
+      })) }}
+   {% endif %}
 
    {{ fields.dropdownField('Ticket', 'tickets_id', item.fields['tickets_id'], __('Chamado vinculado', 'propostas'), travado|merge({
       entity: item.fields['entities_id'],
