@@ -50,6 +50,11 @@ function plugin_propostas_install(): bool
         ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation} ROW_FORMAT=DYNAMIC");
     }
 
+    // 0.2.0: token do link guardado cifrado com a chave do GLPI, para o consultor poder copiar o link de novo.
+    // A busca pelo link usa só o token_hash.
+    $migration->addField($table, 'token_cifrado', 'text', ['after' => 'token_hash']);
+    $migration->migrationOneTable($table);
+
     // Itens da proposta (recorrentes ou pontuais).
     $table = 'glpi_plugin_propostas_propostaitems';
     if (!$DB->tableExists($table)) {
@@ -139,6 +144,8 @@ function plugin_propostas_uninstall(): bool
 
     ProfileRight::deleteProfileRights([PLUGIN_PROPOSTAS_RIGHT]);
     unset($_SESSION['glpiactiveprofile'][PLUGIN_PROPOSTAS_RIGHT]);
+
+    Config::deleteConfigurationValues('plugin:propostas', ['url_publica']);
 
     return true;
 }

@@ -18,12 +18,20 @@ sudo -u www-data php ../bin/console plugin:activate propostas
 
 Depois de instalar, os perfis que administram a configuração recebem acesso total. Para liberar outros perfis, use **Administração > Perfis**. Saia e entre de novo no GLPI para o menu aparecer em **Ferramentas > Propostas**.
 
-## O que já funciona (0.1.0)
+Ao atualizar, rode também `sudo -u www-data php ../bin/console cache:clear`, para o GLPI carregar a rota pública do plugin.
+
+## O que já funciona (0.2.0)
 
 - Menu **Ferramentas > Propostas**, com lista e busca
-- Cadastro da proposta: título, versão, status, solicitante, consultor, chamado vinculado, emissão, validade, aviso prévio e condições comerciais
+- Cadastro da proposta: título, solicitante, consultor, chamado vinculado, emissão, validade, aviso prévio e condições comerciais
 - Aba **Itens**: incluir e remover linhas recorrentes ou pontuais, com subtotal e totais
+- **Link para o cliente**: gerar, copiar, reabrir como nova versão ou cancelar. A página pública não pede login e mostra a proposta no formato de proposta comercial
+- Proposta enviada fica travada para edição
 - Histórico de alterações
+
+## Expor o link para fora da rede
+
+O GLPI pode continuar só na rede interna. Crie um `server` no Nginx para o endereço externo que libere **apenas** a rota pública do plugin e informe esse endereço em **Configuração > Plug-ins > Propostas**. Exemplo em [docs/desenho.md](docs/desenho.md).
 
 ## Roteiro
 

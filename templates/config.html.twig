@@ -1,0 +1,27 @@
+{#
+ # Propostas - configuração.
+ # @license GPL-3.0-or-later
+ #}
+<div class="card">
+   <div class="card-header">
+      <h3 class="card-title"><i class="ti ti-file-dollar"></i> {{ __('Propostas', 'propostas') }}</h3>
+   </div>
+   <form method="post" class="card-body">
+      <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+         <label class="form-label" for="url_publica">{{ __('Endereço externo do link público', 'propostas') }}</label>
+         <input type="url" class="form-control" id="url_publica" name="url_publica" value="{{ url_publica }}"
+                placeholder="https://propostas.exemplo.com.br">
+         <div class="form-hint mt-1">
+            {{ __('É o endereço que o cliente usa de fora da rede. O Nginx desse endereço deve liberar só /plugins/propostas/p/. Em branco, os links usam o endereço do próprio GLPI.', 'propostas') }}
+         </div>
+      </div>
+      <p class="text-muted small">
+         {{ __('Os links gerados agora começam com:', 'propostas') }}
+         <code>{{ url_efetiva }}/plugins/propostas/p/…</code>
+      </p>
+      <button type="submit" name="update" value="1" class="btn btn-primary">
+         <i class="ti ti-device-floppy"></i> {{ _x('button', 'Save') }}
+      </button>
+   </form>
+</div>

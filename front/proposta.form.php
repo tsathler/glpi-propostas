@@ -19,6 +19,14 @@ if (isset($_POST['add'])) {
         Html::redirect($proposta->getLinkURL());
     }
     Html::back();
+} elseif (isset($_POST['gerar_link']) || isset($_POST['reabrir']) || isset($_POST['cancelar'])) {
+    $proposta->check($_POST['id'], UPDATE);
+    match (true) {
+        isset($_POST['gerar_link']) => $proposta->gerarLink(),
+        isset($_POST['reabrir'])    => $proposta->reabrir(),
+        isset($_POST['cancelar'])   => $proposta->cancelar(),
+    };
+    Html::back();
 } elseif (isset($_POST['update'])) {
     $proposta->check($_POST['id'], UPDATE);
     $proposta->update($_POST);

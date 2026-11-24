@@ -76,33 +76,67 @@ class Proposta extends CommonDBTM
         $this->fields['status']             = self::STATUS_RASCUNHO;
     }
 
+    /** Campos que só as ações do plugin alteram (nunca o formulário). */
+    private const CAMPOS_INTERNOS = ['status', 'versao', 'token_hash', 'token_cifrado', 'token_expira'];
+
+    /** Com a proposta travada (já enviada), o formulário só pode mudar estes campos. */
+    private const CAMPOS_LIVRES_TRAVADA = ['id', 'comment'];
+
     public function prepareInputForAdd($input)
     {
+        foreach (self::CAMPOS_INTERNOS as $campo) {
+            unset($input[$campo]);
+        }
         if (empty($input['data_emissao'])) {
             $input['data_emissao'] = date('Y-m-d');
         }
         $input['status'] = self::STATUS_RASCUNHO;
+        $input['versao'] = 1;
 
-        return $this->validarStatus($input);
+        return $input;
     }
 
     public function prepareInputForUpdate($input)
     {
-        return $this->validarStatus($input);
-    }
+        // Ações do próprio plugin (gerar link, reabrir, cancelar, visualização) passam direto.
+        if (!empty($input['_acao_interna'])) {
+            unset($input['_acao_interna']);
+            return $input;
+        }
 
-    /**
-     * @param array<string, mixed> $input
-     * @return array<string, mixed>|false
-     */
-    private function validarStatus(array $input): array|false
-    {
-        if (isset($input['status']) && !array_key_exists($input['status'], self::getStatusList())) {
-            Session::addMessageAfterRedirect(__('Status inválido.', 'propostas'), false, ERROR);
-            return false;
+        foreach (self::CAMPOS_INTERNOS as $campo) {
+            unset($input[$campo]);
+        }
+
+        if (!$this->isEditavel()) {
+            $ignorados = [];
+            foreach ($input as $campo => $valor) {
+                if (str_starts_with($campo, '_') || in_array($campo, self::CAMPOS_LIVRES_TRAVADA, true)) {
+                    continue;
+                }
+                if (array_key_exists($campo, $this->fields) && (string) $this->fields[$campo] !== (string) $valor) {
+                    $ignorados[] = $campo;
+                }
+                unset($input[$campo]);
+            }
+            if ($ignorados !== []) {
+                Session::addMessageAfterRedirect(
+                    htmlescape(__('A proposta já foi enviada: só os comentários podem mudar. Para alterar valores ou condições, use "Reabrir para edição".', 'propostas')),
+                    false,
+                    WARNING
+                );
+            }
         }
 
         return $input;
+    }
+
+    /**
+     * Só o rascunho pode ter dados e itens alterados.
+     */
+    public function isEditavel(): bool
+    {
+        return ($this->fields['status'] ?? self::STATUS_RASCUNHO) === self::STATUS_RASCUNHO;
     }
 
     public function showForm($ID, array $options = []): bool
@@ -110,14 +144,265 @@ class Proposta extends CommonDBTM
         $this->initForm($ID, $options);
 
         TemplateRenderer::getInstance()->display('@propostas/proposta.form.html.twig', [
-            'item'        => $this,
-            'params'      => $options,
-            'numero'      => $this->getNumero(),
-            'status_list' => self::getStatusList(),
-            'totais'      => $this->isNewItem() ? null : $this->getTotaisFormatados(),
+            'item'          => $this,
+            'params'        => $options,
+            'numero'        => $this->getNumero(),
+            'status_label'  => self::getStatusList()[$this->fields['status']] ?? $this->fields['status'],
+            'editavel'      => $this->isEditavel(),
+            'totais'        => $this->isNewItem() ? null : $this->getTotaisFormatados(),
+            'link_publico'  => $this->isNewItem() ? null : $this->getLinkPublico(),
+            'link_expira'   => $this->fields['token_expira'] ?? null,
+            'link_expirado' => $this->isLinkExpirado(),
+            'pode_gerar'    => $this->podeGerarLink(),
+            'pode_reabrir'  => $this->podeReabrir(),
+            'pode_cancelar' => $this->podeCancelar(),
         ]);
 
         return true;
+    }
+
+    /* ------------------------------------------------------------------
+     * Link público
+     * ------------------------------------------------------------------ */
+
+    public function podeGerarLink(): bool
+    {
+        return !$this->isNewItem() && $this->fields['status'] === self::STATUS_RASCUNHO;
+    }
+
+    public function podeReabrir(): bool
+    {
+        return !$this->isNewItem() && in_array($this->fields['status'], [
+            self::STATUS_ENVIADA,
+            self::STATUS_VISUALIZADA,
+            self::STATUS_DUVIDA,
+            self::STATUS_EXPIRADA,
+            self::STATUS_CANCELADA,
+        ], true);
+    }
+
+    public function podeCancelar(): bool
+    {
+        return !$this->isNewItem() && !in_array($this->fields['status'], [
+            self::STATUS_ACEITA,
+            self::STATUS_CANCELADA,
+        ], true);
+    }
+
+    /**
+     * Gera o link público, trava a proposta e marca como enviada.
+     * Um link anterior deixa de valer.
+     */
+    public function gerarLink(): bool
+    {
+        if (!$this->podeGerarLink()) {
+            return false;
+        }
+        if (PropostaItem::getItensDaProposta($this->getID()) === []) {
+            Session::addMessageAfterRedirect(htmlescape(__('Inclua ao menos um item antes de gerar o link.', 'propostas')), false, ERROR);
+            return false;
+        }
+
+        $expira = $this->calcularExpiracao();
+        if ($expira <= new \DateTimeImmutable()) {
+            Session::addMessageAfterRedirect(htmlescape(__('A validade já terminou: ajuste a emissão ou a validade antes de gerar o link.', 'propostas')), false, ERROR);
+            return false;
+        }
+
+        $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+
+        $ok = $this->update([
+            'id'             => $this->getID(),
+            '_acao_interna'  => true,
+            'status'         => self::STATUS_ENVIADA,
+            'token_hash'     => hash('sha256', $token),
+            'token_cifrado'  => (new \GLPIKey())->encrypt($token),
+            'token_expira'   => $expira->format('Y-m-d H:i:s'),
+        ]);
+        if ($ok) {
+            Session::addMessageAfterRedirect(htmlescape(__('Link gerado. A proposta está travada para edição.', 'propostas')));
+        }
+
+        return $ok;
+    }
+
+    /**
+     * Volta para rascunho como nova versão. O link anterior deixa de valer.
+     */
+    public function reabrir(): bool
+    {
+        if (!$this->podeReabrir()) {
+            return false;
+        }
+
+        $ok = $this->update([
+            'id'            => $this->getID(),
+            '_acao_interna' => true,
+            'status'        => self::STATUS_RASCUNHO,
+            'versao'        => (int) $this->fields['versao'] + 1,
+            'token_hash'    => 'NULL',
+            'token_cifrado' => 'NULL',
+            'token_expira'  => 'NULL',
+        ]);
+        if ($ok) {
+            Session::addMessageAfterRedirect(htmlescape(sprintf(
+                __('Proposta reaberta como versão %d. O link anterior não funciona mais.', 'propostas'),
+                (int) $this->fields['versao']
+            )));
+        }
+
+        return $ok;
+    }
+
+    public function cancelar(): bool
+    {
+        if (!$this->podeCancelar()) {
+            return false;
+        }
+
+        return $this->update([
+            'id'            => $this->getID(),
+            '_acao_interna' => true,
+            'status'        => self::STATUS_CANCELADA,
+            'token_hash'    => 'NULL',
+            'token_cifrado' => 'NULL',
+            'token_expira'  => 'NULL',
+        ]);
+    }
+
+    /**
+     * Fim do último dia de validade (emissão + validade em dias).
+     */
+    public function calcularExpiracao(): \DateTimeImmutable
+    {
+        $emissao = \DateTimeImmutable::createFromFormat('!Y-m-d', (string) $this->fields['data_emissao'])
+            ?: new \DateTimeImmutable('today');
+
+        return $emissao->modify(sprintf('+%d days', max(0, (int) $this->fields['validade_dias'])))->setTime(23, 59, 59);
+    }
+
+    public function isLinkExpirado(): bool
+    {
+        if (empty($this->fields['token_expira'])) {
+            return false;
+        }
+
+        return new \DateTimeImmutable((string) $this->fields['token_expira']) <= new \DateTimeImmutable();
+    }
+
+    /**
+     * Endereço que o cliente recebe. Usa a URL externa configurada no plugin ou, sem ela, a do GLPI.
+     */
+    public function getLinkPublico(): ?string
+    {
+        if (empty($this->fields['token_cifrado'])) {
+            return null;
+        }
+        $token = (new \GLPIKey())->decrypt($this->fields['token_cifrado']);
+        if ($token === null || $token === '') {
+            return null;
+        }
+
+        return self::getUrlBasePublica() . '/plugins/propostas/p/' . $token;
+    }
+
+    public static function getUrlBasePublica(): string
+    {
+        global $CFG_GLPI;
+
+        $url = (string) (\Config::getConfigurationValue('plugin:propostas', 'url_publica') ?? '');
+        if ($url === '') {
+            $url = (string) $CFG_GLPI['url_base'];
+        }
+
+        return rtrim($url, '/');
+    }
+
+    /**
+     * Procura a proposta pelo token do link (compara só o hash).
+     */
+    public static function buscarPorToken(string $token): ?self
+    {
+        if (preg_match('/^[A-Za-z0-9_-]{43}$/', $token) !== 1) {
+            return null;
+        }
+        $proposta = new self();
+        if (!$proposta->getFromDBByCrit(['token_hash' => hash('sha256', $token)])) {
+            return null;
+        }
+
+        return $proposta;
+    }
+
+    /**
+     * Primeira abertura pelo cliente: Enviada -> Visualizada.
+     * Quem está logado no GLPI (consultor conferindo o link) não conta.
+     */
+    public function registrarVisualizacao(): void
+    {
+        if ($this->fields['status'] !== self::STATUS_ENVIADA || Session::getLoginUserID() !== false) {
+            return;
+        }
+        $this->update([
+            'id'            => $this->getID(),
+            '_acao_interna' => true,
+            'status'        => self::STATUS_VISUALIZADA,
+        ]);
+    }
+
+    /**
+     * Dados da página pública, já formatados (a página não tem sessão nem preferências de usuário).
+     *
+     * @return array<string, mixed>
+     */
+    public function getDadosPublicos(): array
+    {
+        $moeda = static fn (float $v): string => 'R$ ' . number_format($v, 2, ',', '.');
+        $numero = static fn (float $v): string => rtrim(rtrim(number_format($v, 2, ',', '.'), '0'), ',');
+        $cores = ['#2563eb', '#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#14b8a6', '#6366f1'];
+
+        $totais = $this->getTotais();
+        $grupos = [PropostaItem::TIPO_RECORRENTE => [], PropostaItem::TIPO_PONTUAL => []];
+        foreach (PropostaItem::getItensDaProposta($this->getID()) as $i => $item) {
+            $subtotal = PropostaItem::calcularSubtotal($item);
+            $total_tipo = $totais[$item['tipo']] ?? 0.0;
+            $grupos[$item['tipo']][] = [
+                'nome'        => (string) $item['name'],
+                'quantidade'  => $numero((float) $item['quantidade']),
+                'unitario'    => $moeda((float) $item['valor_unitario']),
+                'desconto'    => (float) $item['desconto_pct'] > 0 ? $numero((float) $item['desconto_pct']) . '%' : null,
+                'subtotal'    => $moeda($subtotal),
+                'percentual'  => $total_tipo > 0 ? round($subtotal / $total_tipo * 100, 2) : 0,
+                'cor'         => $cores[$i % count($cores)],
+            ];
+        }
+
+        $consultor = '';
+        if ((int) $this->fields['users_id_consultor'] > 0) {
+            $user = new \User();
+            if ($user->getFromDB((int) $this->fields['users_id_consultor'])) {
+                $consultor = $user->getFriendlyName();
+            }
+        }
+
+        $emissao = \DateTimeImmutable::createFromFormat('!Y-m-d', (string) $this->fields['data_emissao']);
+
+        return [
+            'numero'        => $this->getNumero(),
+            'titulo'        => (string) $this->fields['name'],
+            'versao'        => (int) $this->fields['versao'],
+            'emissao'       => $emissao ? $emissao->format('d/m/Y') : '',
+            'validade_dias' => (int) $this->fields['validade_dias'],
+            'valida_ate'    => $this->calcularExpiracao()->format('d/m/Y'),
+            'solicitante'   => (string) $this->fields['solicitante'],
+            'consultor'     => $consultor,
+            'aviso_previo'  => (int) $this->fields['aviso_previo_dias'],
+            'condicoes'     => (string) $this->fields['condicoes'],
+            'recorrentes'   => $grupos[PropostaItem::TIPO_RECORRENTE],
+            'pontuais'      => $grupos[PropostaItem::TIPO_PONTUAL],
+            'total_mensal'  => $moeda($totais[PropostaItem::TIPO_RECORRENTE]),
+            'total_unico'   => $moeda($totais[PropostaItem::TIPO_PONTUAL]),
+        ];
     }
 
     /**
