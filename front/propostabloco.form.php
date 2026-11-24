@@ -9,7 +9,7 @@
 use GlpiPlugin\Propostas\Proposta;
 use GlpiPlugin\Propostas\PropostaBloco;
 
-Session::checkRight(PropostaBloco::$rightname, READ);
+Session::checkRightsOr(PropostaBloco::$rightname, \GlpiPlugin\Propostas\Visibilidade::LEITURA);
 
 $bloco = new PropostaBloco();
 

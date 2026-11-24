@@ -265,6 +265,37 @@ function plugin_propostas_install(): bool
         }
     }
 
+    // Níveis de leitura (as próprias, da equipe, todas). Uma vez só: quem já lia propostas
+    // continua vendo todas, até alguém ajustar o perfil em Administração > Perfis > Propostas.
+    $marca = Config::getConfigurationValues('plugin:propostas', ['instalado_niveis_leitura']);
+    if (empty($marca['instalado_niveis_leitura'])) {
+        foreach ($DB->request(['FROM' => 'glpi_profilerights', 'WHERE' => ['name' => PLUGIN_PROPOSTAS_RIGHT]]) as $row) {
+            $rights = (int) $row['rights'];
+            if (($rights & READ) === READ) {
+                $DB->update('glpi_profilerights', ['rights' => $rights | GlpiPlugin\Propostas\Visibilidade::TODAS], ['id' => $row['id']]);
+                if ((int) ($_SESSION['glpiactiveprofile']['id'] ?? 0) === (int) $row['profiles_id']) {
+                    $_SESSION['glpiactiveprofile'][PLUGIN_PROPOSTAS_RIGHT] = $rights | GlpiPlugin\Propostas\Visibilidade::TODAS;
+                }
+            }
+        }
+        Config::setConfigurationValues('plugin:propostas', ['instalado_niveis_leitura' => '1']);
+    }
+
+    // Gestores que o próprio plugin pôs como observadores nos chamados das propostas
+    // (a sincronização só remove esses; observador incluído à mão fica).
+    $table = GlpiPlugin\Propostas\Equipe::TABELA_OBSERVADORES;
+    if (!$DB->tableExists($table)) {
+        $DB->doQuery("CREATE TABLE `{$table}` (
+            `id`            INT {$sign} NOT NULL AUTO_INCREMENT,
+            `tickets_id`    INT {$sign} NOT NULL DEFAULT 0,
+            `users_id`      INT {$sign} NOT NULL DEFAULT 0,
+            `date_creation` TIMESTAMP NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `unicity` (`tickets_id`, `users_id`),
+            KEY `users_id` (`users_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation} ROW_FORMAT=DYNAMIC");
+    }
+
     // Colunas padrão das listas, só se a lista ainda não tiver nenhuma.
     // Números = ids do rawSearchOptions() de cada classe.
     $colunas = [
@@ -341,6 +372,7 @@ function plugin_propostas_uninstall(): bool
     CronTask::unregister('propostas');
 
     $tabelas = [
+        'glpi_plugin_propostas_observadores',
         'glpi_plugin_propostas_propostablocos',
         'glpi_plugin_propostas_modelos_blocos',
         'glpi_plugin_propostas_blocos',
@@ -385,7 +417,23 @@ function plugin_propostas_uninstall(): bool
     Config::deleteConfigurationValues('plugin:propostas', [
         'url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url', 'chamado_itilcategories_id', 'chamado_groups_id',
         'instalado_notificacoes', 'instalado_colunas_1_1',
+        'equipes_groups_id', 'propostas_entities_id', 'instalado_niveis_leitura', 'instalado_notificacoes_equipes',
     ]);
 
     return true;
+}
+
+/**
+ * Filtro da lista e da busca de propostas pelo nível de leitura do perfil
+ * (as próprias, as da equipe ou todas). Chamado pelo GLPI para os tipos do plugin.
+ *
+ * @return array<string, mixed>
+ */
+function plugin_propostas_addDefaultWhere($itemtype): array
+{
+    if ($itemtype !== GlpiPlugin\Propostas\Proposta::class) {
+        return [];
+    }
+
+    return GlpiPlugin\Propostas\Proposta::criteriosVisibilidade();
 }

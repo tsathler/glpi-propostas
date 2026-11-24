@@ -3,8 +3,8 @@
 /**
  * Propostas - notificações (Configurar > Notificações).
  *
- * Eventos: aberta (primeira abertura pelo cliente), aceita, duvida.
- * Destinatário padrão: o consultor da proposta.
+ * Eventos: aberta (primeira abertura pelo cliente), aceita, duvida, expirada.
+ * Destinatários próprios: o consultor da proposta e o gestor da equipe atual do consultor.
  *
  * @license GPL-3.0-or-later https://www.gnu.org/licenses/gpl-3.0.html
  */
@@ -22,26 +22,50 @@ class NotificationTargetProposta extends NotificationTarget
     /** Destinatário próprio: o usuário do campo "Consultor". */
     public const CONSULTOR = 7801;
 
+    /** Destinatário próprio: o(s) Responsável(is) da equipe atual do consultor. */
+    public const GESTOR = 7802;
+
     private const NOME_MODELO = 'Propostas';
 
     public function getEvents()
     {
         return [
-            'aberta' => __('Proposta aberta pelo cliente', 'propostas'),
-            'aceita' => __('Proposta aceita pelo cliente', 'propostas'),
-            'duvida' => __('Dúvida do cliente sobre a proposta', 'propostas'),
+            'aberta'   => __('Proposta aberta pelo cliente', 'propostas'),
+            'aceita'   => __('Proposta aceita pelo cliente', 'propostas'),
+            'duvida'   => __('Dúvida do cliente sobre a proposta', 'propostas'),
+            'expirada' => __('Proposta expirada', 'propostas'),
         ];
     }
 
     public function addAdditionalTargets($event = '')
     {
         $this->addTarget(self::CONSULTOR, __('Consultor da proposta', 'propostas'));
+        $this->addTarget(self::GESTOR, __('Gestor da equipe do consultor', 'propostas'));
     }
 
     public function addSpecificTargets($data, $options)
     {
         if ((int) $data['items_id'] === self::CONSULTOR) {
             $this->addUserByField('users_id_consultor');
+        } elseif ((int) $data['items_id'] === self::GESTOR) {
+            $this->adicionarGestores();
+        }
+    }
+
+    /** Gestores calculados na hora do envio, pela equipe atual do consultor. */
+    private function adicionarGestores(): void
+    {
+        global $DB;
+
+        $gestores = Equipe::gestoresDoConsultor((int) $this->obj->getField('users_id_consultor'));
+        if ($gestores === []) {
+            return;
+        }
+        $criteria = $this->getDistinctUserCriteria() + $this->getProfileJoinCriteria();
+        $criteria['FROM'] = \User::getTable();
+        $criteria['WHERE'][\User::getTable() . '.id'] = $gestores;
+        foreach ($DB->request($criteria) as $data) {
+            $this->addToRecipientsList($data);
         }
     }
 
@@ -125,11 +149,14 @@ class NotificationTargetProposta extends NotificationTarget
 
         // Só na primeira instalação: reinstalar (--force) não recria notificação apagada nem
         // duplica o modelo renomeado pelo administrador.
-        $marca = \Config::getConfigurationValues('plugin:propostas', ['instalado_notificacoes']);
+        $marca = \Config::getConfigurationValues('plugin:propostas', ['instalado_notificacoes', 'instalado_notificacoes_equipes']);
         if (!empty($marca['instalado_notificacoes'])) {
+            if (empty($marca['instalado_notificacoes_equipes'])) {
+                self::instalarEquipes();
+            }
             return;
         }
-        \Config::setConfigurationValues('plugin:propostas', ['instalado_notificacoes' => '1']);
+        \Config::setConfigurationValues('plugin:propostas', ['instalado_notificacoes' => '1', 'instalado_notificacoes_equipes' => '1']);
 
         $itemtype = Proposta::class;
         $agora    = $_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s');
@@ -161,38 +188,90 @@ class NotificationTargetProposta extends NotificationTarget
             ]);
         }
 
-        $nomes = [
-            'aberta' => 'Proposta aberta pelo cliente',
-            'aceita' => 'Proposta aceita pelo cliente',
-            'duvida' => 'Dúvida do cliente sobre a proposta',
-        ];
-        foreach ($nomes as $evento => $nome) {
-            if (countElementsInTable(Notification::getTable(), ['itemtype' => $itemtype, 'event' => $evento]) > 0) {
-                continue;
-            }
-            $notifications_id = (new Notification())->add([
-                'name'         => $nome,
-                'entities_id'  => 0,
-                'is_recursive' => 1,
-                'is_active'    => 1,
-                'itemtype'     => $itemtype,
-                'event'        => $evento,
-                'comment'      => '',
-                'date_mod'     => $agora,
-            ]);
-            if (!$notifications_id) {
-                continue;
-            }
-            (new Notification_NotificationTemplate())->add([
-                'notifications_id'         => $notifications_id,
-                'notificationtemplates_id' => $templates_id,
-                'mode'                     => 'mailing',
-            ]);
+        foreach (self::NOMES as $evento => $nome) {
+            self::criarNotificacao($evento, $nome, (int) $templates_id);
+        }
+    }
+
+    /** Nomes das notificações criadas na instalação (um por evento). */
+    private const NOMES = [
+        'aberta'   => 'Proposta aberta pelo cliente',
+        'aceita'   => 'Proposta aceita pelo cliente',
+        'duvida'   => 'Dúvida do cliente sobre a proposta',
+        'expirada' => 'Proposta expirada',
+    ];
+
+    /**
+     * Notificação do evento com os destinatários Consultor e Gestor, se ainda não existir.
+     */
+    private static function criarNotificacao(string $evento, string $nome, int $templates_id): void
+    {
+        global $DB;
+
+        $itemtype = Proposta::class;
+        if ($templates_id <= 0 || countElementsInTable(Notification::getTable(), ['itemtype' => $itemtype, 'event' => $evento]) > 0) {
+            return;
+        }
+        $notifications_id = (new Notification())->add([
+            'name'         => $nome,
+            'entities_id'  => 0,
+            'is_recursive' => 1,
+            'is_active'    => 1,
+            'itemtype'     => $itemtype,
+            'event'        => $evento,
+            'comment'      => '',
+            'date_mod'     => $_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s'),
+        ]);
+        if (!$notifications_id) {
+            return;
+        }
+        (new Notification_NotificationTemplate())->add([
+            'notifications_id'         => $notifications_id,
+            'notificationtemplates_id' => $templates_id,
+            'mode'                     => 'mailing',
+        ]);
+        foreach ([self::CONSULTOR, self::GESTOR] as $alvo) {
             $DB->insert('glpi_notificationtargets', [
                 'notifications_id' => $notifications_id,
                 'type'             => Notification::USER_TYPE,
-                'items_id'         => self::CONSULTOR,
+                'items_id'         => $alvo,
             ]);
+        }
+    }
+
+    /**
+     * Atualização para as equipes, uma vez só: a notificação "expirada" e o destinatário
+     * Gestor nas notificações do plugin que já existem. Não recria o que foi apagado.
+     */
+    private static function instalarEquipes(): void
+    {
+        global $DB;
+
+        \Config::setConfigurationValues('plugin:propostas', ['instalado_notificacoes_equipes' => '1']);
+        $itemtype = Proposta::class;
+
+        $modelo = $DB->request([
+            'SELECT' => ['id'],
+            'FROM'   => NotificationTemplate::getTable(),
+            'WHERE'  => ['itemtype' => $itemtype],
+            'ORDER'  => 'id',
+            'LIMIT'  => 1,
+        ])->current();
+        self::criarNotificacao('expirada', self::NOMES['expirada'], (int) ($modelo['id'] ?? 0));
+
+        foreach ($DB->request(['SELECT' => ['id'], 'FROM' => Notification::getTable(), 'WHERE' => ['itemtype' => $itemtype]]) as $row) {
+            $ja_tem = countElementsInTable('glpi_notificationtargets', [
+                'notifications_id' => $row['id'],
+                'type'             => Notification::USER_TYPE,
+                'items_id'         => self::GESTOR,
+            ]) > 0;
+            if (!$ja_tem) {
+                $DB->insert('glpi_notificationtargets', [
+                    'notifications_id' => $row['id'],
+                    'type'             => Notification::USER_TYPE,
+                    'items_id'         => self::GESTOR,
+                ]);
+            }
         }
     }
 

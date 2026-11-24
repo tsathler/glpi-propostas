@@ -16,6 +16,12 @@ class Acesso extends CommonGLPI
 {
     public static $rightname = 'plugin_propostas_proposta';
 
+    /** Qualquer nível de leitura de propostas (as próprias, da equipe ou todas). */
+    public static function canView(): bool
+    {
+        return Proposta::canView();
+    }
+
     public const TABELA = 'glpi_plugin_propostas_acessos';
 
     /** Quantos acessos a aba mostra. */

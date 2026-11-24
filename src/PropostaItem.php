@@ -23,6 +23,12 @@ class PropostaItem extends CommonDBChild
 
     public static $rightname = 'plugin_propostas_proposta';
 
+    /** Qualquer nível de leitura de propostas (as próprias, da equipe ou todas). */
+    public static function canView(): bool
+    {
+        return Proposta::canView();
+    }
+
     public $dohistory = true;
 
     public const TIPO_RECORRENTE = Calculo::TIPO_RECORRENTE;

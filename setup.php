@@ -9,6 +9,7 @@
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Propostas\Acesso;
 use GlpiPlugin\Propostas\Bloco;
+use GlpiPlugin\Propostas\Equipe;
 use GlpiPlugin\Propostas\Modelo;
 use GlpiPlugin\Propostas\ModeloBloco;
 use GlpiPlugin\Propostas\ModeloItem;
@@ -18,7 +19,7 @@ use GlpiPlugin\Propostas\PropostaBloco;
 use GlpiPlugin\Propostas\PropostaItem;
 use GlpiPlugin\Propostas\Resposta;
 
-define('PLUGIN_PROPOSTAS_VERSION', '1.2.1');
+define('PLUGIN_PROPOSTAS_VERSION', '1.3.0');
 define('PLUGIN_PROPOSTAS_MIN_GLPI', '11.0.0');
 define('PLUGIN_PROPOSTAS_MAX_GLPI', '11.99.99');
 define('PLUGIN_PROPOSTAS_RIGHT', 'plugin_propostas_proposta');
@@ -71,6 +72,15 @@ function plugin_init_propostas(): void
     // Ferramentas > Propostas, Modelos de proposta e Blocos de texto.
     // O GLPI só mostra cada entrada para quem tem o direito de leitura dela.
     $PLUGIN_HOOKS[Hooks::MENU_TOADD]['propostas'] = ['tools' => [Proposta::class, Modelo::class, Bloco::class]];
+
+    // Equipes: entrada/saída de membro, troca de Responsável ou de grupo pai acertam o
+    // gestor observador nos chamados abertos das propostas.
+    foreach ([Hooks::ITEM_ADD, Hooks::ITEM_UPDATE, Hooks::ITEM_PURGE] as $hook) {
+        $PLUGIN_HOOKS[$hook]['propostas'] = [
+            \Group_User::class => [Equipe::class, 'aoMudarMembro'],
+            \Group::class      => [Equipe::class, 'aoMudarGrupo'],
+        ];
+    }
 
     // Configuração > Plug-ins > Propostas (endereço externo do link e busca de CNPJ).
     if (Session::haveRight('config', UPDATE)) {
