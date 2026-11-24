@@ -9,6 +9,12 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 - Ação automática diária **expirar** (Configurar > Ações automáticas): marca como *Expirada* as propostas *Enviada*, *Visualizada* ou *Com dúvida* cujo link já venceu.
 - Botão **Duplicar**: cria um rascunho com os dados, condições e itens da proposta, emissão de hoje e o usuário atual como consultor. Não copia chamado vinculado, status, versão, link, respostas nem acessos.
+- Testes PHPUnit (`composer test`) para subtotal, totais, hash dos valores aceitos, código de verificação e CPF.
+- CI no GitHub Actions: `composer validate`, sintaxe de todos os arquivos e PHPUnit no PHP 8.2, 8.3 e 8.4; conferência de CRLF, da seção do CHANGELOG e do conteúdo do zip da release.
+
+### Changed
+
+- Cálculos e CPF saíram das classes ligadas ao GLPI para `Calculo` e `Cpf`, testáveis sem o GLPI. O hash dos valores aceitos não mudou (aceites antigos continuam conferindo). Os totais agora são arredondados a 2 casas depois da soma.
 
 ## [0.3.0]
 

@@ -7,7 +7,9 @@
 *.zip  binary
 
 # Keep repository-only files out of `git archive` release zips.
-.gitattributes export-ignore
-.gitignore     export-ignore
-.github        export-ignore
-docs           export-ignore
+.gitattributes   export-ignore
+.gitignore       export-ignore
+.github          export-ignore
+docs             export-ignore
+tests            export-ignore
+phpunit.xml.dist export-ignore
