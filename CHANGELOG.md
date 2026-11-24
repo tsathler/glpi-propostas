@@ -5,6 +5,14 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+### Added
+
+- Níveis de leitura no direito *Propostas*: **Ler as próprias**, **Ler da equipe** e **Ler todas**. O filtro vale na lista, na busca, no formulário, nas abas, no duplicar e nas ações. Na atualização, todo perfil que já lia propostas ganha *Ler todas*, e ninguém perde acesso.
+- Equipes de consultores: grupos filhos de um grupo pai configurado, com o Responsável do grupo como gestor. O gestor vê e age nas propostas da equipe e entra como observador nos chamados delas. A troca de equipe ou de Responsável atualiza os chamados abertos.
+- Bloqueio: com as equipes ligadas, quem não está numa equipe não cria nem duplica propostas (exceto o nível *Ler todas*). A troca de consultor obedece ao nível de leitura.
+- Notificação "Proposta expirada" e destinatário "Gestor da equipe do consultor" (incluído também nas notificações que já existem).
+- Entidade padrão das propostas e avisos de cadastro das equipes na página de configuração.
+
 ## [1.2.1] - 2026-11-24
 
 ### Security

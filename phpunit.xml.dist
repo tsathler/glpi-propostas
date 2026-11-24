@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Testes das classes que não dependem do GLPI (Calculo, Cpf).
+  Testes das classes que não dependem do GLPI (Calculo, Cpf, Cnpj, Visibilidade).
   Rodar: composer install && vendor/bin/phpunit
 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -20,6 +20,7 @@
             <file>src/Calculo.php</file>
             <file>src/Cpf.php</file>
             <file>src/Cnpj.php</file>
+            <file>src/Visibilidade.php</file>
         </include>
     </source>
 </phpunit>

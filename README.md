@@ -18,7 +18,7 @@ sudo -u www-data php bin/console plugin:activate propostas
 sudo -u www-data php bin/console cache:clear
 ```
 
-- **Acesso:** os perfis que podem alterar a Configuração recebem acesso total na instalação. Os outros perfis são liberados em **Administração > Perfis > Propostas**, com dois direitos: *Propostas* e *Gerenciar modelos e blocos de texto*.
+- **Acesso:** os perfis que podem alterar a Configuração recebem acesso total na instalação. Os outros perfis são liberados em **Administração > Perfis > Propostas**, com dois direitos: *Propostas* e *Gerenciar modelos e blocos de texto*. O direito *Propostas* tem três níveis de leitura: **Ler as próprias** (o usuário é o consultor), **Ler da equipe** (também as dos consultores das equipes em que é Responsável) e **Ler todas**. Criar, atualizar e excluir valem só sobre as propostas que o usuário vê.
 - **Menu:** saia e entre de novo no GLPI (ou troque de perfil) para os menus aparecerem em **Ferramentas**.
 - **Atualizar:** troque a pasta e rode os mesmos comandos, com `plugin:install propostas --force`. O `cache:clear` faz o GLPI carregar as rotas novas.
 
@@ -35,7 +35,9 @@ sudo -u www-data php bin/console cache:clear
 - **Resposta do cliente:** o cliente **aceita** em nome da empresa (nome, CPF, cargo e declaração) ou envia **dúvidas**. O aceite grava um código de verificação dos valores aceitos.
 - **Chamado da proposta:** ao gerar o link de uma proposta sem chamado vinculado, o plugin abre um chamado (requisição) na entidade da proposta, com o consultor como requerente e técnico; categoria e grupo técnico são opcionais, em **Configuração > Plug-ins > Propostas**. Envio, aceite, dúvida, cancelamento e expiração viram acompanhamentos privados no chamado, que é fechado manualmente. Quem preferir pode vincular um chamado existente antes de gerar o link.
 - **Abas da proposta:** **Respostas do cliente** e **Acessos ao link**.
-- **Notificações ao consultor:** proposta aberta, aceita e com dúvida. Exigem as notificações por e-mail ativas no GLPI.
+- **Equipes de consultores (opcional):** em **Configuração > Plug-ins > Propostas**, escolha um grupo pai. Cada grupo filho direto é uma equipe; o membro marcado como **Responsável** é o gestor. Com as equipes ligadas: quem não está em nenhuma equipe não cria propostas (exceto o nível *Ler todas*); o consultor só pode ser alguém de uma equipe; o gestor pode pôr como consultor só os membros das equipes que gere; e o gestor entra como **observador** no chamado das propostas da equipe. A visão segue a equipe **atual**: quando alguém muda de equipe ou o Responsável muda, o plugin troca o observador nos chamados ainda abertos (os solucionados e fechados não mudam, e um observador incluído à mão nunca é removido). A página de configuração avisa sobre consultor em mais de uma equipe e equipe sem ou com mais de um Responsável.
+- **Entidade padrão (opcional):** as propostas nascem sempre na entidade escolhida, quando o usuário tem acesso a ela.
+- **Notificações:** proposta aberta, aceita, com dúvida e expirada. Destinatários próprios: *Consultor da proposta* e *Gestor da equipe do consultor* (calculado na hora do envio). Para avisar um nível acima do gestor, use o destinatário nativo por **perfil**. Exigem as notificações por e-mail ativas no GLPI.
 - **Duplicar:** cria um rascunho novo a partir de uma proposta.
 - **Expiração automática:** a ação automática diária **expirar** marca como *Expirada* a proposta cujo link venceu. Ela roda pelo cron do sistema (modo CLI do GLPI); sem o cron configurado, o link vence no prazo, mas o status só muda quando a ação rodar.
 - **Exclusão:** proposta com aceite registrado não pode ser excluída (use *Cancelar*), para não perder a prova do aceite. **Desinstalar o plugin apaga todas as propostas, aceites e acessos**: faça backup antes.

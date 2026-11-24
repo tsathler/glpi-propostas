@@ -39,6 +39,88 @@ class Proposta extends CommonDBTM
         return 'ti ti-file-dollar';
     }
 
+    /* ------------------------------------------------------------------
+     * Níveis de leitura: as próprias, as da equipe ou todas
+     * ------------------------------------------------------------------ */
+
+    public function getRights($interface = 'central')
+    {
+        $values = parent::getRights($interface);
+        $values[Visibilidade::MINHAS] = [
+            'short' => __('Ler as próprias', 'propostas'),
+            'long'  => __('Ler as propostas em que é o consultor', 'propostas'),
+        ];
+        $values[Visibilidade::EQUIPE] = [
+            'short' => __('Ler da equipe', 'propostas'),
+            'long'  => __('Ler e agir nas propostas dos consultores das equipes em que é Responsável', 'propostas'),
+        ];
+        $values[Visibilidade::TODAS] = [
+            'short' => __('Ler todas', 'propostas'),
+            'long'  => __('Ler e agir em todas as propostas das entidades do perfil', 'propostas'),
+        ];
+
+        return $values;
+    }
+
+    public static function canView(): bool
+    {
+        return Session::haveRightsOr(self::$rightname, Visibilidade::LEITURA);
+    }
+
+    /** O usuário atual vê as propostas deste consultor? */
+    public static function podeVerDoConsultor(int $consultor): bool
+    {
+        $direitos = Equipe::direitosAtuais();
+        $usuario  = Equipe::usuarioAtual();
+        // As equipes só são consultadas quando o nível "da equipe" decide.
+        $membros  = ($direitos & Visibilidade::EQUIPE) !== 0 ? Equipe::membrosGeridos($usuario) : [];
+
+        return Visibilidade::podeVer($direitos, $usuario, $consultor, $membros);
+    }
+
+    /**
+     * Filtro da lista e da busca (hook addDefaultWhere). Vazio = sem filtro.
+     *
+     * @return array<string, mixed>
+     */
+    public static function criteriosVisibilidade(): array
+    {
+        $usuario = Equipe::usuarioAtual();
+        $ids = Visibilidade::consultoresVisiveis(Equipe::direitosAtuais(), $usuario, Equipe::membrosGeridos($usuario));
+
+        return $ids === null ? [] : [self::getTable() . '.users_id_consultor' => $ids];
+    }
+
+    /** Pode criar ou duplicar (com as equipes ligadas, só quem está numa equipe ou vê todas). */
+    public static function podeCriarAgora(): bool
+    {
+        return Visibilidade::podeCriar(
+            Equipe::direitosAtuais(),
+            Equipe::ativas(),
+            Equipe::usuarioEmEquipe(Equipe::usuarioAtual())
+        );
+    }
+
+    private function visivelParaUsuario(): bool
+    {
+        return self::podeVerDoConsultor((int) ($this->fields['users_id_consultor'] ?? 0));
+    }
+
+    public function canViewItem(): bool
+    {
+        return parent::canViewItem() && $this->visivelParaUsuario();
+    }
+
+    public function canUpdateItem(): bool
+    {
+        return parent::canUpdateItem() && $this->visivelParaUsuario();
+    }
+
+    public function canDeleteItem(): bool
+    {
+        return parent::canDeleteItem() && $this->visivelParaUsuario();
+    }
+
     /**
      * @return array<string, string>
      */
@@ -141,6 +223,21 @@ class Proposta extends CommonDBTM
         $input['status'] = self::STATUS_RASCUNHO;
         $input['versao'] = 1;
 
+        if (!self::podeCriarAgora()) {
+            Session::addMessageAfterRedirect(htmlescape(__('Você não está em nenhuma equipe de consultores e não pode criar propostas. Procure o administrador do GLPI.', 'propostas')), false, ERROR);
+            return false;
+        }
+        if ((int) ($input['users_id_consultor'] ?? 0) <= 0) {
+            $input['users_id_consultor'] = Equipe::usuarioAtual();
+        }
+
+        // Entidade padrão das propostas, quando o usuário tem acesso a ela.
+        $padrao = (int) (\Config::getConfigurationValue('plugin:propostas', 'propostas_entities_id') ?? -1);
+        if ($padrao >= 0 && Session::haveAccessToEntity($padrao) && (int) ($input['entities_id'] ?? -1) !== $padrao) {
+            $input['entities_id']  = $padrao;
+            $input['is_recursive'] = 0;
+        }
+
         // Com modelo: validade, aviso prévio e condições vêm dele (itens e blocos em post_addItem).
         $modelos_id = (int) ($input['plugin_propostas_modelos_id'] ?? 0);
         if ($modelos_id > 0 && empty($input['_sem_copiar_modelo'])) {
@@ -173,6 +270,20 @@ class Proposta extends CommonDBTM
             if ($modelo->getFromDB($modelos_id)) {
                 $modelo->copiarParaProposta($this->getID());
             }
+        }
+        if ((int) ($this->fields['tickets_id'] ?? 0) > 0) {
+            Equipe::sincronizarChamados([(int) $this->fields['tickets_id']]);
+        }
+    }
+
+    public function post_updateItem($history = true): void
+    {
+        // Chamado ou consultor mudou: acerta o gestor observador no chamado antigo e no novo.
+        if (in_array('tickets_id', $this->updates, true) || in_array('users_id_consultor', $this->updates, true)) {
+            Equipe::sincronizarChamados([
+                (int) ($this->oldvalues['tickets_id'] ?? 0),
+                (int) $this->fields['tickets_id'],
+            ]);
         }
     }
 
@@ -294,6 +405,20 @@ class Proposta extends CommonDBTM
                 Session::addMessageAfterRedirect(htmlescape(__('Consultor inválido: escolha um usuário ativo com acesso à entidade da proposta.', 'propostas')), false, ERROR);
                 return false;
             }
+
+            $usuario = Equipe::usuarioAtual();
+            $direitos = Equipe::direitosAtuais();
+            if (!Visibilidade::podeAtribuir(
+                $direitos,
+                $usuario,
+                $users_id,
+                Equipe::ativas(),
+                Equipe::usuarioEmEquipe($users_id),
+                ($direitos & Visibilidade::EQUIPE) !== 0 ? Equipe::membrosGeridos($usuario) : []
+            )) {
+                Session::addMessageAfterRedirect(htmlescape(__('Você não pode pôr este usuário como consultor: escolha você mesmo ou um consultor de uma equipe que você gere (o consultor precisa estar numa equipe).', 'propostas')), false, ERROR);
+                return false;
+            }
         }
 
         return true;
@@ -327,7 +452,7 @@ class Proposta extends CommonDBTM
             'pode_gerar'    => $this->podeGerarLink(),
             'pode_reabrir'  => $this->podeReabrir(),
             'pode_cancelar' => $this->podeCancelar(),
-            'pode_duplicar' => !$this->isNewItem() && Session::haveRight(self::$rightname, CREATE),
+            'pode_duplicar' => !$this->isNewItem() && Session::haveRight(self::$rightname, CREATE) && self::podeCriarAgora(),
             'modelo'        => $this->getModelo(),
             'cnpj_consulta' => (bool) (\Config::getConfigurationValue('plugin:propostas', 'cnpj_consulta_ativa') ?? false),
             'cnpj_url'      => \Plugin::getWebDir('propostas') . '/ajax/cnpj.php',
@@ -423,6 +548,7 @@ class Proposta extends CommonDBTM
                     htmlescape($proposta->getNumero()),
                     (int) $proposta->fields['versao']
                 ));
+                $proposta->notificar('expirada');
                 $task->log(sprintf('Proposta %s (versão %d) expirada', $proposta->getNumero(), (int) $proposta->fields['versao']));
             }
         }
@@ -1124,7 +1250,7 @@ class Proposta extends CommonDBTM
      */
     public function canPurgeItem(): bool
     {
-        if (!parent::canPurgeItem()) {
+        if (!parent::canPurgeItem() || !$this->visivelParaUsuario()) {
             return false;
         }
         return !$this->temAceite();

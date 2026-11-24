@@ -9,7 +9,7 @@
 use Glpi\Exception\Http\BadRequestHttpException;
 use GlpiPlugin\Propostas\PropostaItem;
 
-Session::checkRight(PropostaItem::$rightname, READ);
+Session::checkRightsOr(PropostaItem::$rightname, \GlpiPlugin\Propostas\Visibilidade::LEITURA);
 
 $item = new PropostaItem();
 

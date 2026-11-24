@@ -62,8 +62,55 @@
          {{ __('Ambos opcionais. Use categoria e grupo visíveis nas entidades onde as propostas são criadas (recursivos na entidade raiz, por exemplo).', 'propostas') }}
       </div>
 
+      <hr>
+      <h4>{{ __('Equipes de consultores', 'propostas') }}</h4>
+      <p class="text-muted small">
+         {{ __('Cada grupo filho direto do grupo pai é uma equipe. O membro marcado como Responsável é o gestor; os outros membros são os consultores. Com o grupo pai escolhido: quem não está em nenhuma equipe não cria propostas (exceto o nível "Ler todas"), o gestor entra como observador nos chamados das propostas da equipe e recebe as notificações com o destinatário "Gestor da equipe do consultor". Em branco, as regras de equipe ficam desligadas.', 'propostas') }}
+      </p>
+      <div class="row">
+         {{ fields.dropdownField('Group', 'equipes_groups_id', equipes_groups_id, __('Grupo pai das equipes', 'propostas'), {
+            entity: 0,
+            entity_sons: true,
+            is_horizontal: false,
+            field_class: 'col-md-6 mb-3'
+         }) }}
+      </div>
+      {% if equipes_groups_id > 0 %}
+         <p class="small mb-2">
+            {{ __('Equipes encontradas:', 'propostas') }}
+            {{ equipes is empty ? __('nenhuma (o grupo pai não tem grupos filhos).', 'propostas') : equipes|join(', ') }}
+         </p>
+      {% endif %}
+      {% for aviso in avisos_equipes %}
+         <div class="alert alert-warning py-2 mb-2"><i class="ti ti-alert-triangle"></i> {{ aviso }}</div>
+      {% endfor %}
+
+      <hr>
+      <h4>{{ __('Entidade padrão das propostas', 'propostas') }}</h4>
+      <div class="mb-2 form-check form-switch">
+         <input class="form-check-input" type="checkbox" id="entidade_padrao_ativa" name="entidade_padrao_ativa" value="1" {{ entidade_padrao_ativa ? 'checked' }}>
+         <label class="form-check-label" for="entidade_padrao_ativa">{{ __('Criar as propostas sempre nesta entidade (quando o usuário tem acesso a ela)', 'propostas') }}</label>
+      </div>
+      <div class="row">
+         {{ fields.dropdownField('Entity', 'propostas_entities_id', propostas_entities_id, __('Entidade', 'propostas'), {
+            entity: 0,
+            entity_sons: true,
+            is_horizontal: false,
+            field_class: 'col-md-6 mb-3'
+         }) }}
+      </div>
+      <div class="form-hint mb-3">
+         {{ __('Evita que quem tem várias entidades crie a proposta (e o chamado dela) na entidade errada.', 'propostas') }}
+      </div>
+
       <button type="submit" name="update" value="1" class="btn btn-primary">
          <i class="ti ti-device-floppy"></i> {{ _x('button', 'Save') }}
       </button>
+      {% if equipes_groups_id > 0 %}
+         <button type="submit" name="sincronizar" value="1" class="btn btn-outline-secondary ms-2"
+                 title="{{ __('Acerta o gestor observador em todos os chamados abertos das propostas', 'propostas') }}">
+            <i class="ti ti-refresh"></i> {{ __('Sincronizar observadores', 'propostas') }}
+         </button>
+      {% endif %}
    </form>
 </div>

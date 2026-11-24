@@ -7,13 +7,21 @@
  */
 
 use Glpi\Application\View\TemplateRenderer;
+use GlpiPlugin\Propostas\Equipe;
 use GlpiPlugin\Propostas\Proposta;
 
 Session::checkRight('config', UPDATE);
 
 const PROPOSTAS_CNPJ_URL_PADRAO = 'https://brasilapi.com.br/api/cnpj/v1/{cnpj}';
 
+if (isset($_POST['sincronizar'])) {
+    Equipe::sincronizarTudo();
+    Session::addMessageAfterRedirect(htmlescape(__('Observadores dos chamados abertos sincronizados.', 'propostas')));
+    Html::back();
+}
+
 if (isset($_POST['update'])) {
+    $config_antes = Config::getConfigurationValues('plugin:propostas', ['equipes_groups_id']);
     $url     = rtrim(trim((string) ($_POST['url_publica'] ?? '')), '/');
     $url_ok  = $url === '' || preg_match('#^https?://[^/\s]+(/[^\s]*)?$#i', $url) === 1;
     $cnpj    = trim((string) ($_POST['cnpj_consulta_url'] ?? '')) ?: PROPOSTAS_CNPJ_URL_PADRAO;
@@ -30,7 +38,15 @@ if (isset($_POST['update'])) {
             'cnpj_consulta_url'   => $cnpj,
             'chamado_itilcategories_id' => (string) max(0, (int) ($_POST['chamado_itilcategories_id'] ?? 0)),
             'chamado_groups_id'         => (string) max(0, (int) ($_POST['chamado_groups_id'] ?? 0)),
+            'equipes_groups_id'         => (string) max(0, (int) ($_POST['equipes_groups_id'] ?? 0)),
+            'propostas_entities_id'     => !empty($_POST['entidade_padrao_ativa'])
+                ? (string) max(0, (int) ($_POST['propostas_entities_id'] ?? 0))
+                : '-1',
         ]);
+        // Grupo pai trocado: as equipes mudam, e com elas os gestores observadores.
+        if ((int) ($_POST['equipes_groups_id'] ?? 0) !== (int) ($config_antes['equipes_groups_id'] ?? 0)) {
+            Equipe::sincronizarTudo();
+        }
         Session::addMessageAfterRedirect(htmlescape(__('Configuração salva.', 'propostas')));
     }
     Html::back();
@@ -38,7 +54,11 @@ if (isset($_POST['update'])) {
 
 Html::header(__('Propostas', 'propostas'), '', 'config', 'plugin');
 
-$config = Config::getConfigurationValues('plugin:propostas', ['url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url', 'chamado_itilcategories_id', 'chamado_groups_id']);
+$config = Config::getConfigurationValues('plugin:propostas', [
+    'url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url', 'chamado_itilcategories_id', 'chamado_groups_id',
+    'equipes_groups_id', 'propostas_entities_id',
+]);
+$entidade_padrao = (int) ($config['propostas_entities_id'] ?? -1);
 TemplateRenderer::getInstance()->display('@propostas/config.html.twig', [
     'url_publica'         => (string) ($config['url_publica'] ?? ''),
     'url_efetiva'         => Proposta::getUrlBasePublica(),
@@ -47,6 +67,14 @@ TemplateRenderer::getInstance()->display('@propostas/config.html.twig', [
     'cnpj_url_padrao'     => PROPOSTAS_CNPJ_URL_PADRAO,
     'chamado_itilcategories_id' => (int) ($config['chamado_itilcategories_id'] ?? 0),
     'chamado_groups_id'         => (int) ($config['chamado_groups_id'] ?? 0),
+    'equipes_groups_id'         => (int) ($config['equipes_groups_id'] ?? 0),
+    'entidade_padrao_ativa'     => $entidade_padrao >= 0,
+    'propostas_entities_id'     => max(0, $entidade_padrao),
+    'avisos_equipes'            => Equipe::avisos(),
+    'equipes'                   => array_map(
+        static fn (int $id): string => Dropdown::getDropdownName('glpi_groups', $id),
+        Equipe::equipes()
+    ),
 ]);
 
 Html::footer();

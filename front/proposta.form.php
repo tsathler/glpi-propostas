@@ -8,7 +8,7 @@
 
 use GlpiPlugin\Propostas\Proposta;
 
-Session::checkRight(Proposta::$rightname, READ);
+Session::checkRightsOr(Proposta::$rightname, \GlpiPlugin\Propostas\Visibilidade::LEITURA);
 
 $proposta = new Proposta();
 
