@@ -1,0 +1,106 @@
+{#
+ # Propostas - aba "Itens" da proposta.
+ # @license GPL-3.0-or-later
+ #}
+<div class="card">
+   {% if canedit %}
+      <form method="post" action="{{ form_url }}" class="card-body border-bottom">
+         <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+         <input type="hidden" name="{{ items_id }}" value="{{ proposta.getID() }}">
+         <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+               <label class="form-label" for="prop_tipo">{{ __('Tipo', 'propostas') }}</label>
+               <select class="form-select" name="tipo" id="prop_tipo">
+                  {% for valor, rotulo in tipos %}
+                     <option value="{{ valor }}">{{ rotulo }}</option>
+                  {% endfor %}
+               </select>
+            </div>
+            <div class="col-md-4">
+               <label class="form-label" for="prop_name">{{ __('Descrição', 'propostas') }}</label>
+               <input class="form-control" type="text" name="name" id="prop_name" required maxlength="255">
+            </div>
+            <div class="col-md-1">
+               <label class="form-label" for="prop_qtd">{{ __('Qtd.', 'propostas') }}</label>
+               <input class="form-control" type="text" inputmode="decimal" name="quantidade" id="prop_qtd" value="1" required>
+            </div>
+            <div class="col-md-2">
+               <label class="form-label" for="prop_unit">{{ __('Valor unitário (R$)', 'propostas') }}</label>
+               <input class="form-control" type="text" inputmode="decimal" name="valor_unitario" id="prop_unit" value="0" required>
+            </div>
+            <div class="col-md-1">
+               <label class="form-label" for="prop_desc">{{ __('Desconto %', 'propostas') }}</label>
+               <input class="form-control" type="text" inputmode="decimal" name="desconto_pct" id="prop_desc" value="0">
+            </div>
+            <div class="col-md-1">
+               <label class="form-label" for="prop_ordem">{{ __('Ordem', 'propostas') }}</label>
+               <input class="form-control" type="number" name="ordem" id="prop_ordem" value="0">
+            </div>
+            <div class="col-md-1">
+               <button type="submit" name="add" value="1" class="btn btn-primary w-100">
+                  <i class="ti ti-plus"></i> {{ _x('button', 'Add') }}
+               </button>
+            </div>
+         </div>
+      </form>
+   {% endif %}
+
+   <div class="table-responsive">
+      <table class="table table-hover card-table">
+         <thead>
+            <tr>
+               <th>{{ __('Tipo', 'propostas') }}</th>
+               <th>{{ __('Descrição', 'propostas') }}</th>
+               <th class="text-end">{{ __('Qtd.', 'propostas') }}</th>
+               <th class="text-end">{{ __('Valor unitário', 'propostas') }}</th>
+               <th class="text-end">{{ __('Desconto', 'propostas') }}</th>
+               <th class="text-end">{{ __('Subtotal', 'propostas') }}</th>
+               {% if canedit %}<th></th>{% endif %}
+            </tr>
+         </thead>
+         <tbody>
+            {% for linha in linhas %}
+               <tr>
+                  <td>{{ linha.tipo }}</td>
+                  <td>{{ linha.name }}</td>
+                  <td class="text-end">{{ linha.quantidade }}</td>
+                  <td class="text-end">R$ {{ linha.valor_unitario }}</td>
+                  <td class="text-end">{{ linha.desconto_pct }}%</td>
+                  <td class="text-end fw-bold">R$ {{ linha.subtotal }}</td>
+                  {% if canedit %}
+                     <td class="text-end">
+                        <form method="post" action="{{ form_url }}" class="d-inline">
+                           <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+                           <input type="hidden" name="id" value="{{ linha.id }}">
+                           <button type="submit" name="purge" value="1" class="btn btn-sm btn-ghost-danger"
+                                   title="{{ __('Remover', 'propostas') }}"
+                                   onclick="return confirm('{{ __('Remover este item?', 'propostas')|e('js') }}');">
+                              <i class="ti ti-trash"></i>
+                           </button>
+                        </form>
+                     </td>
+                  {% endif %}
+               </tr>
+            {% else %}
+               <tr>
+                  <td colspan="{{ canedit ? 7 : 6 }}" class="text-center text-muted">
+                     {{ __('Nenhum item cadastrado.', 'propostas') }}
+                  </td>
+               </tr>
+            {% endfor %}
+         </tbody>
+         <tfoot>
+            <tr>
+               <th colspan="5" class="text-end">{{ __('Total mensal (recorrente)', 'propostas') }}</th>
+               <th class="text-end">R$ {{ totais['recorrente'] }}</th>
+               {% if canedit %}<th></th>{% endif %}
+            </tr>
+            <tr>
+               <th colspan="5" class="text-end">{{ __('Total da implantação (pontual)', 'propostas') }}</th>
+               <th class="text-end">R$ {{ totais['pontual'] }}</th>
+               {% if canedit %}<th></th>{% endif %}
+            </tr>
+         </tfoot>
+      </table>
+   </div>
+</div>

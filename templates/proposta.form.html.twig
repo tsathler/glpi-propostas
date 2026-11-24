@@ -1,0 +1,45 @@
+{#
+ # Propostas - formulário da proposta.
+ # @license GPL-3.0-or-later
+ #}
+{% extends 'generic_show_form.html.twig' %}
+{% import 'components/form/fields_macros.html.twig' as fields %}
+
+{% block more_fields %}
+   {% if numero %}
+      {{ fields.htmlField('', numero|e, __('Número', 'propostas')) }}
+   {% endif %}
+
+   {{ fields.numberField('versao', item.fields['versao'], __('Versão', 'propostas'), {min: 1}) }}
+
+   {{ fields.dropdownArrayField('status', item.fields['status'], status_list, __('Status'), {
+      disabled: item.isNewItem()
+   }) }}
+
+   {{ fields.textField('solicitante', item.fields['solicitante'], __('Solicitado por', 'propostas')) }}
+
+   {{ fields.dropdownField('User', 'users_id_consultor', item.fields['users_id_consultor'], __('Consultor', 'propostas'), {
+      right: 'all',
+      entity: item.fields['entities_id']
+   }) }}
+
+   {{ fields.dropdownField('Ticket', 'tickets_id', item.fields['tickets_id'], __('Chamado vinculado', 'propostas'), {
+      entity: item.fields['entities_id']
+   }) }}
+
+   {{ fields.dateField('data_emissao', item.fields['data_emissao'], __('Emissão', 'propostas')) }}
+
+   {{ fields.numberField('validade_dias', item.fields['validade_dias'], __('Validade (dias)', 'propostas'), {min: 1}) }}
+
+   {{ fields.numberField('aviso_previo_dias', item.fields['aviso_previo_dias'], __('Aviso prévio (dias)', 'propostas'), {min: 0}) }}
+
+   {% if totais %}
+      {{ fields.htmlField('', 'R$ ' ~ totais['recorrente'] ~ ' / ' ~ __('mês', 'propostas'), __('Investimento mensal', 'propostas')) }}
+      {{ fields.htmlField('', 'R$ ' ~ totais['pontual'], __('Implantação (pagamento único)', 'propostas')) }}
+   {% endif %}
+
+   {{ fields.textareaField('condicoes', item.fields['condicoes'], __('Condições comerciais', 'propostas'), {
+      enable_richtext: true,
+      full_width: true
+   }) }}
+{% endblock %}

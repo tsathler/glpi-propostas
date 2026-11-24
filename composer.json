@@ -1,0 +1,14 @@
+{
+    "name": "glpi-plugin/propostas",
+    "description": "Propostas comerciais no GLPI, com itens, valores e aceite pelo cliente",
+    "type": "glpi-plugin",
+    "license": "GPL-3.0-or-later",
+    "require": {
+        "php": ">=8.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "GlpiPlugin\\Propostas\\": "src/"
+        }
+    }
+}
