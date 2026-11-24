@@ -1,0 +1,78 @@
+{#
+ # Propostas - aba "Blocos de texto" da proposta.
+ # @license GPL-3.0-or-later
+ #}
+{% import 'components/form/fields_macros.html.twig' as fields %}
+<div class="card">
+   {% if travada %}
+      <div class="alert alert-info m-3 mb-0">
+         <i class="ti ti-lock"></i>
+         {{ __('A proposta já foi enviada e os blocos estão travados. Para alterar, use "Reabrir para edição" na aba Proposta.', 'propostas') }}
+      </div>
+   {% endif %}
+   {% if canedit %}
+      <form method="post" action="{{ form_url }}" class="card-body border-bottom">
+         <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+         <input type="hidden" name="{{ items_id }}" value="{{ proposta.getID() }}">
+         <div class="row g-2 align-items-end">
+            <div class="col-md-7">
+               {{ fields.dropdownField('GlpiPlugin\\Propostas\\Bloco', '_plugin_propostas_blocos_id', 0, __('Incluir da biblioteca', 'propostas'), {
+                  condition: {'is_active': 1},
+                  entity: proposta.fields['entities_id'],
+                  full_width: true,
+                  is_horizontal: false
+               }) }}
+            </div>
+            <div class="col-md-2">
+               <label class="form-label" for="pbloco_ordem">{{ __('Ordem', 'propostas') }}</label>
+               <input class="form-control" type="number" name="ordem" id="pbloco_ordem" value="{{ (linhas|length + 1) * 10 }}">
+            </div>
+            <div class="col-md-3">
+               <button type="submit" name="add" value="1" class="btn btn-primary w-100">
+                  <i class="ti ti-plus"></i> {{ _x('button', 'Add') }}
+               </button>
+            </div>
+         </div>
+      </form>
+   {% endif %}
+
+   <div class="table-responsive">
+      <table class="table table-hover card-table">
+         <thead>
+            <tr>
+               <th>{{ __('Ordem', 'propostas') }}</th>
+               <th>{{ __('Título', 'propostas') }}</th>
+               <th>{{ __('Texto', 'propostas') }}</th>
+               {% if canedit %}<th></th>{% endif %}
+            </tr>
+         </thead>
+         <tbody>
+            {% for linha in linhas %}
+               <tr>
+                  <td>{{ linha.ordem }}</td>
+                  <td><a href="{{ form_url }}?id={{ linha.id }}">{{ linha.name }}</a></td>
+                  <td class="text-muted small">{{ linha.conteudo|html_to_text|u.truncate(140, '…') }}</td>
+                  {% if canedit %}
+                     <td class="text-end text-nowrap">
+                        <a class="btn btn-sm btn-ghost-secondary" href="{{ form_url }}?id={{ linha.id }}" title="{{ __('Editar', 'propostas') }}"><i class="ti ti-pencil"></i></a>
+                        <form method="post" action="{{ form_url }}" class="d-inline">
+                           <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+                           <input type="hidden" name="id" value="{{ linha.id }}">
+                           <button type="submit" name="purge" value="1" class="btn btn-sm btn-ghost-danger"
+                                   title="{{ __('Remover', 'propostas') }}"
+                                   onclick="return confirm('{{ __('Remover este bloco da proposta?', 'propostas')|e('js') }}');">
+                              <i class="ti ti-trash"></i>
+                           </button>
+                        </form>
+                     </td>
+                  {% endif %}
+               </tr>
+            {% else %}
+               <tr>
+                  <td colspan="{{ canedit ? 4 : 3 }}" class="text-center text-muted">{{ __('Nenhum bloco de texto nesta proposta.', 'propostas') }}</td>
+               </tr>
+            {% endfor %}
+         </tbody>
+      </table>
+   </div>
+</div>

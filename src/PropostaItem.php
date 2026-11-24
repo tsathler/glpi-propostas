@@ -16,6 +16,8 @@ use Session;
 
 class PropostaItem extends CommonDBChild
 {
+    use ValidaItem;
+
     public static $itemtype = Proposta::class;
     public static $items_id = 'plugin_propostas_propostas_id';
 
@@ -29,17 +31,6 @@ class PropostaItem extends CommonDBChild
     public static function getTypeName($nb = 0): string
     {
         return _n('Item', 'Itens', $nb, 'propostas');
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public static function getTipos(): array
-    {
-        return [
-            self::TIPO_RECORRENTE => __('Recorrente (mensal)', 'propostas'),
-            self::TIPO_PONTUAL    => __('Pontual (pagamento único)', 'propostas'),
-        ];
     }
 
     /**
@@ -101,60 +92,16 @@ class PropostaItem extends CommonDBChild
 
     public function prepareInputForAdd($input)
     {
-        $input = $this->validar($input, true);
+        $input = $this->validarItem($input, true);
 
         return $input === false ? false : parent::prepareInputForAdd($input);
     }
 
     public function prepareInputForUpdate($input)
     {
-        $input = $this->validar($input, false);
+        $input = $this->validarItem($input, false);
 
         return $input === false ? false : parent::prepareInputForUpdate($input);
-    }
-
-    /**
-     * @param array<string, mixed> $input
-     * @return array<string, mixed>|false
-     */
-    private function validar(array $input, bool $is_add): array|false
-    {
-        // Aceita "1.234,56" ou "1234.56".
-        foreach (['quantidade', 'valor_unitario', 'desconto_pct'] as $campo) {
-            if (isset($input[$campo]) && is_string($input[$campo])) {
-                $valor = trim($input[$campo]);
-                if (str_contains($valor, ',')) {
-                    $valor = str_replace(['.', ','], ['', '.'], $valor);
-                }
-                $input[$campo] = $valor;
-            }
-        }
-
-        $erros = [];
-        if ($is_add && trim((string) ($input['name'] ?? '')) === '') {
-            $erros[] = __('Informe a descrição do item.', 'propostas');
-        }
-        if (isset($input['tipo']) && !array_key_exists($input['tipo'], self::getTipos())) {
-            $erros[] = __('Tipo de item inválido.', 'propostas');
-        }
-        if (isset($input['quantidade']) && (!is_numeric($input['quantidade']) || $input['quantidade'] <= 0)) {
-            $erros[] = __('A quantidade deve ser maior que zero.', 'propostas');
-        }
-        if (isset($input['valor_unitario']) && (!is_numeric($input['valor_unitario']) || $input['valor_unitario'] < 0)) {
-            $erros[] = __('O valor unitário não pode ser negativo.', 'propostas');
-        }
-        if (
-            isset($input['desconto_pct'])
-            && (!is_numeric($input['desconto_pct']) || $input['desconto_pct'] < 0 || $input['desconto_pct'] > 100)
-        ) {
-            $erros[] = __('O desconto deve ficar entre 0 e 100%.', 'propostas');
-        }
-
-        foreach ($erros as $erro) {
-            Session::addMessageAfterRedirect(htmlescape($erro), false, ERROR);
-        }
-
-        return $erros === [] ? $input : false;
     }
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
@@ -195,7 +142,7 @@ class PropostaItem extends CommonDBChild
         }
 
         TemplateRenderer::getInstance()->display('@propostas/propostaitem.list.html.twig', [
-            'proposta'  => $proposta,
+            'pai'       => $proposta,
             'linhas'    => $linhas,
             'totais'    => $proposta->getTotaisFormatados(),
             'tipos'     => self::getTipos(),

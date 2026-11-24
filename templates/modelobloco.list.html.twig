@@ -1,0 +1,72 @@
+{#
+ # Propostas - aba "Blocos de texto" do modelo.
+ # @license GPL-3.0-or-later
+ #}
+{% import 'components/form/fields_macros.html.twig' as fields %}
+<div class="card">
+   {% if canedit %}
+      <form method="post" action="{{ form_url }}" class="card-body border-bottom">
+         <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+         <input type="hidden" name="{{ items_id }}" value="{{ modelo.getID() }}">
+         <div class="row g-2 align-items-end">
+            <div class="col-md-7">
+               {{ fields.dropdownField('GlpiPlugin\\Propostas\\Bloco', 'plugin_propostas_blocos_id', 0, __('Bloco de texto', 'propostas'), {
+                  condition: {'is_active': 1},
+                  entity: modelo.fields['entities_id'],
+                  entity_sons: modelo.fields['is_recursive'],
+                  full_width: true,
+                  is_horizontal: false
+               }) }}
+            </div>
+            <div class="col-md-2">
+               <label class="form-label" for="bloco_ordem">{{ __('Ordem', 'propostas') }}</label>
+               <input class="form-control" type="number" name="ordem" id="bloco_ordem" value="{{ (linhas|length + 1) * 10 }}">
+            </div>
+            <div class="col-md-3">
+               <button type="submit" name="add" value="1" class="btn btn-primary w-100">
+                  <i class="ti ti-plus"></i> {{ _x('button', 'Add') }}
+               </button>
+            </div>
+         </div>
+      </form>
+   {% endif %}
+
+   <div class="table-responsive">
+      <table class="table table-hover card-table">
+         <thead>
+            <tr>
+               <th>{{ __('Ordem', 'propostas') }}</th>
+               <th>{{ __('Título', 'propostas') }}</th>
+               <th>{{ __('Active') }}</th>
+               {% if canedit %}<th></th>{% endif %}
+            </tr>
+         </thead>
+         <tbody>
+            {% for linha in linhas %}
+               <tr>
+                  <td>{{ linha.ordem }}</td>
+                  <td><a href="{{ path('/plugins/propostas/front/bloco.form.php') }}?id={{ linha.plugin_propostas_blocos_id }}">{{ linha.name }}</a></td>
+                  <td>{{ linha.is_active ? __('Yes') : __('No') }}</td>
+                  {% if canedit %}
+                     <td class="text-end">
+                        <form method="post" action="{{ form_url }}" class="d-inline">
+                           <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+                           <input type="hidden" name="id" value="{{ linha.id }}">
+                           <button type="submit" name="purge" value="1" class="btn btn-sm btn-ghost-danger"
+                                   title="{{ __('Tirar do modelo', 'propostas') }}"
+                                   onclick="return confirm('{{ __('Tirar este bloco do modelo? O bloco continua na biblioteca.', 'propostas')|e('js') }}');">
+                              <i class="ti ti-trash"></i>
+                           </button>
+                        </form>
+                     </td>
+                  {% endif %}
+               </tr>
+            {% else %}
+               <tr>
+                  <td colspan="{{ canedit ? 4 : 3 }}" class="text-center text-muted">{{ __('Nenhum bloco neste modelo.', 'propostas') }}</td>
+               </tr>
+            {% endfor %}
+         </tbody>
+      </table>
+   </div>
+</div>

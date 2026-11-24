@@ -20,6 +20,22 @@
          {{ __('Os links gerados agora começam com:', 'propostas') }}
          <code>{{ url_efetiva }}/plugins/propostas/p/…</code>
       </p>
+
+      <hr>
+      <h4>{{ __('Busca de CNPJ', 'propostas') }}</h4>
+      <div class="mb-3 form-check form-switch">
+         <input class="form-check-input" type="checkbox" id="cnpj_consulta_ativa" name="cnpj_consulta_ativa" value="1" {{ cnpj_consulta_ativa ? 'checked' }}>
+         <label class="form-check-label" for="cnpj_consulta_ativa">{{ __('Mostrar o botão "Buscar CNPJ" na proposta', 'propostas') }}</label>
+      </div>
+      <div class="mb-3">
+         <label class="form-label" for="cnpj_consulta_url">{{ __('URL da consulta', 'propostas') }}</label>
+         <input type="text" class="form-control" id="cnpj_consulta_url" name="cnpj_consulta_url" value="{{ cnpj_consulta_url }}"
+                placeholder="{{ cnpj_url_padrao }}">
+         <div class="form-hint mt-1">
+            {{ __('Use {cnpj} no lugar do número. A consulta sai do servidor do GLPI (com o proxy do GLPI, se houver), envia só o CNPJ e espera no máximo 5 segundos. O padrão é a BrasilAPI; a Minha Receita usa o mesmo formato de resposta. Em branco, volta ao padrão.', 'propostas') }}
+         </div>
+      </div>
+
       <button type="submit" name="update" value="1" class="btn btn-primary">
          <i class="ti ti-device-floppy"></i> {{ _x('button', 'Save') }}
       </button>

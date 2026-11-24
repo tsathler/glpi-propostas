@@ -1,0 +1,16 @@
+{#
+ # Propostas - edição de um bloco de texto da proposta (o campo "Nome" é o título).
+ # @license GPL-3.0-or-later
+ #}
+{% extends 'generic_show_form.html.twig' %}
+{% import 'components/form/fields_macros.html.twig' as fields %}
+
+{% block more_fields %}
+   {{ fields.hiddenField('plugin_propostas_propostas_id', item.fields['plugin_propostas_propostas_id']) }}
+   {{ fields.htmlField('', '<a href="' ~ proposta.getLinkURL() ~ '">' ~ (proposta.getNumero() ~ ' · ' ~ proposta.fields['name'])|e ~ '</a>', __('Proposta', 'propostas')) }}
+   {{ fields.numberField('ordem', item.fields['ordem'], __('Ordem', 'propostas'), {min: 0}) }}
+   {{ fields.textareaField('conteudo', item.fields['conteudo'], __('Texto', 'propostas'), {
+      enable_richtext: true,
+      full_width: true
+   }) }}
+{% endblock %}

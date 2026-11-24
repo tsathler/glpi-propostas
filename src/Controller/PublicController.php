@@ -68,10 +68,12 @@ final class PublicController extends AbstractController
             return $indisponivel;
         }
 
-        $nome = (string) $request->request->get('nome', '');
+        $nome  = (string) $request->request->get('nome', '');
+        $cargo = (string) $request->request->get('cargo', '');
         $erros = $proposta->aceitar(
             $nome,
             (string) $request->request->get('cpf', ''),
+            $cargo,
             $request->request->get('declaracao') === '1',
             (string) $request->getClientIp(),
             (string) $request->headers->get('User-Agent', '')
@@ -80,7 +82,7 @@ final class PublicController extends AbstractController
             return $this->paginaProposta($proposta, $token, [
                 'form_aberto' => 'aceite',
                 'erros'       => $erros,
-                'valores'     => ['nome' => $nome],
+                'valores'     => ['nome' => $nome, 'cargo' => $cargo],
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 

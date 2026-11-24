@@ -14,6 +14,7 @@
                   <th>{{ __('Tipo', 'propostas') }}</th>
                   <th>{{ __('Versão', 'propostas') }}</th>
                   <th>{{ __('Nome', 'propostas') }}</th>
+                  <th>{{ __('Cargo', 'propostas') }}</th>
                   <th>{{ __('CPF', 'propostas') }}</th>
                   <th>{{ __('Detalhe', 'propostas') }}</th>
                   <th>{{ __('Origem', 'propostas') }}</th>
@@ -28,13 +29,14 @@
                      </td>
                      <td>{{ l.versao }}</td>
                      <td>{{ l.nome }}</td>
+                     <td>{{ l.cargo }}</td>
                      <td class="text-nowrap">{{ l.cpf }}</td>
                      <td>
                         {% if l.aceite %}
                            <div><strong>{{ __('Código', 'propostas') }}:</strong> <code>{{ l.codigo }}</code></div>
                            <div class="small text-muted text-break" title="{{ __('SHA-256 dos valores aceitos', 'propostas') }}">{{ l.hash }}</div>
-                           {% if l.versao == versao_atual %}
-                              {% if l.hash == hash_atual %}
+                           {% if l.confere is not null %}
+                              {% if l.confere %}
                                  <div class="small text-success"><i class="ti ti-check"></i> {{ __('Confere com os valores atuais da proposta.', 'propostas') }}</div>
                               {% else %}
                                  <div class="small text-danger"><i class="ti ti-alert-triangle"></i> {{ __('Não confere com os valores atuais da proposta.', 'propostas') }}</div>

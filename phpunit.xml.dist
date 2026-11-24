@@ -19,6 +19,7 @@
         <include>
             <file>src/Calculo.php</file>
             <file>src/Cpf.php</file>
+            <file>src/Cnpj.php</file>
         </include>
     </source>
 </phpunit>

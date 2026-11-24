@@ -7,15 +7,22 @@
  */
 
 use Glpi\Plugin\Hooks;
-use GlpiPlugin\Propostas\Proposta;
 use GlpiPlugin\Propostas\Acesso;
+use GlpiPlugin\Propostas\Bloco;
+use GlpiPlugin\Propostas\Modelo;
+use GlpiPlugin\Propostas\ModeloBloco;
+use GlpiPlugin\Propostas\ModeloItem;
+use GlpiPlugin\Propostas\Profile;
+use GlpiPlugin\Propostas\Proposta;
+use GlpiPlugin\Propostas\PropostaBloco;
 use GlpiPlugin\Propostas\PropostaItem;
 use GlpiPlugin\Propostas\Resposta;
 
-define('PLUGIN_PROPOSTAS_VERSION', '1.0.0');
+define('PLUGIN_PROPOSTAS_VERSION', '1.1.0');
 define('PLUGIN_PROPOSTAS_MIN_GLPI', '11.0.0');
 define('PLUGIN_PROPOSTAS_MAX_GLPI', '11.99.99');
 define('PLUGIN_PROPOSTAS_RIGHT', 'plugin_propostas_proposta');
+define('PLUGIN_PROPOSTAS_RIGHT_MODELO', 'plugin_propostas_modelo');
 
 function plugin_version_propostas(): array
 {
@@ -45,13 +52,21 @@ function plugin_init_propostas(): void
 
     Plugin::registerClass(Proposta::class, ['notificationtemplates_types' => true]);
     Plugin::registerClass(PropostaItem::class);
+    Plugin::registerClass(PropostaBloco::class);
     Plugin::registerClass(Resposta::class);
     Plugin::registerClass(Acesso::class);
+    Plugin::registerClass(Modelo::class);
+    Plugin::registerClass(ModeloItem::class);
+    Plugin::registerClass(ModeloBloco::class);
+    Plugin::registerClass(Bloco::class);
+    // Administração > Perfis > Propostas: direitos "Propostas" e "Gerenciar modelos".
+    Plugin::registerClass(Profile::class, ['addtabon' => \Profile::class]);
 
-    // Ferramentas > Propostas. O GLPI só mostra o menu para quem tem o direito de leitura.
-    $PLUGIN_HOOKS[Hooks::MENU_TOADD]['propostas'] = ['tools' => Proposta::class];
+    // Ferramentas > Propostas, Modelos de proposta e Blocos de texto.
+    // O GLPI só mostra cada entrada para quem tem o direito de leitura dela.
+    $PLUGIN_HOOKS[Hooks::MENU_TOADD]['propostas'] = ['tools' => [Proposta::class, Modelo::class, Bloco::class]];
 
-    // Configuração > Plug-ins > Propostas (endereço externo do link público).
+    // Configuração > Plug-ins > Propostas (endereço externo do link e busca de CNPJ).
     if (Session::haveRight('config', UPDATE)) {
         $PLUGIN_HOOKS[Hooks::CONFIG_PAGE]['propostas'] = 'front/config.form.php';
     }
