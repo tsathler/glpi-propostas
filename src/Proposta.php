@@ -298,6 +298,11 @@ class Proposta extends CommonDBTM
                 && $proposta->update(['id' => $proposta->getID(), '_acao_interna' => true, 'status' => self::STATUS_EXPIRADA])
             ) {
                 $expiradas++;
+                $proposta->adicionarAcompanhamento(sprintf(
+                    '<p><strong>Proposta nº %s (versão %d) expirou</strong> sem resposta do cliente.</p>',
+                    htmlescape($proposta->getNumero()),
+                    (int) $proposta->fields['versao']
+                ));
                 $task->log(sprintf('Proposta %s (versão %d) expirada', $proposta->getNumero(), (int) $proposta->fields['versao']));
             }
         }
@@ -404,9 +409,67 @@ class Proposta extends CommonDBTM
         ]);
         if ($ok) {
             Session::addMessageAfterRedirect(htmlescape(__('Link gerado. A proposta está travada para edição.', 'propostas')));
+            if ((int) $this->fields['tickets_id'] <= 0) {
+                $this->abrirChamado();
+            }
+            $this->adicionarAcompanhamento(sprintf(
+                '<p><strong>Proposta nº %s (versão %d) enviada ao cliente.</strong></p><p>Link válido até %s.</p>',
+                htmlescape($this->getNumero()),
+                (int) $this->fields['versao'],
+                htmlescape($expira->format('d/m/Y H:i'))
+            ));
         }
 
         return $ok;
+    }
+
+    /**
+     * Abre o chamado da proposta (quando nenhum foi vinculado à mão) e grava o vínculo.
+     * Falha não impede o link: fica no log e o consultor recebe um aviso.
+     */
+    private function abrirChamado(): void
+    {
+        global $CFG_GLPI;
+
+        $config = \Config::getConfigurationValues('plugin:propostas', ['chamado_itilcategories_id', 'chamado_groups_id']);
+        $consultor = (int) $this->fields['users_id_consultor'] ?: (int) Session::getLoginUserID();
+        $empresa = trim((string) $this->fields['empresa_razao_social']);
+
+        $input = [
+            'entities_id'       => (int) $this->fields['entities_id'],
+            'type'              => \Ticket::DEMAND_TYPE,
+            'name'              => sprintf('Proposta nº %s - %s', $this->getNumero(), $empresa !== '' ? $empresa : (string) $this->fields['name']),
+            'content'           => sprintf(
+                '<p>Chamado aberto automaticamente pelo plugin Propostas.</p><p>Proposta: <a href="%s">nº %s - %s</a><br>Empresa: %s (CNPJ %s)</p>',
+                htmlescape(rtrim((string) $CFG_GLPI['url_base'], '/') . self::getFormURLWithID($this->getID(), false)),
+                htmlescape($this->getNumero()),
+                htmlescape((string) $this->fields['name']),
+                htmlescape($empresa),
+                htmlescape((string) $this->fields['empresa_cnpj'])
+            ),
+            'itilcategories_id' => (int) ($config['chamado_itilcategories_id'] ?? 0),
+        ];
+        if ($consultor > 0) {
+            $input['_users_id_requester'] = $consultor;
+            $input['_users_id_assign']    = $consultor;
+        }
+        if ((int) ($config['chamado_groups_id'] ?? 0) > 0) {
+            $input['_groups_id_assign'] = (int) $config['chamado_groups_id'];
+        }
+
+        try {
+            $tickets_id = (int) (new \Ticket())->add($input);
+        } catch (\Throwable $e) {
+            \Toolbox::logInFile('propostas', sprintf("Abertura de chamado da proposta %d falhou: %s\n", $this->getID(), $e->getMessage()));
+            $tickets_id = 0;
+        }
+        if ($tickets_id <= 0) {
+            Session::addMessageAfterRedirect(htmlescape(__('Não foi possível abrir o chamado da proposta. Vincule um chamado manualmente.', 'propostas')), false, WARNING);
+            return;
+        }
+
+        $this->update(['id' => $this->getID(), '_acao_interna' => true, 'tickets_id' => $tickets_id]);
+        Session::addMessageAfterRedirect(htmlescape(sprintf(__('Chamado %d aberto para esta proposta.', 'propostas'), $tickets_id)));
     }
 
     /**
@@ -443,7 +506,7 @@ class Proposta extends CommonDBTM
             return false;
         }
 
-        return $this->update([
+        $ok = $this->update([
             'id'            => $this->getID(),
             '_acao_interna' => true,
             'status'        => self::STATUS_CANCELADA,
@@ -451,6 +514,15 @@ class Proposta extends CommonDBTM
             'token_cifrado' => 'NULL',
             'token_expira'  => 'NULL',
         ]);
+        if ($ok) {
+            $this->adicionarAcompanhamento(sprintf(
+                '<p><strong>Proposta nº %s (versão %d) cancelada.</strong> O link deixou de funcionar.</p>',
+                htmlescape($this->getNumero()),
+                (int) $this->fields['versao']
+            ));
+        }
+
+        return $ok;
     }
 
     /**
@@ -710,8 +782,8 @@ class Proposta extends CommonDBTM
     }
 
     /**
-     * Acompanhamento privado no chamado vinculado, se houver. Sem notificação do chamado:
-     * o consultor já recebe a do plugin.
+     * Acompanhamento privado no chamado vinculado, se houver (envio, aceite, dúvida, cancelamento
+     * e expiração). Sem notificação do chamado: o consultor já recebe a do plugin.
      */
     private function adicionarAcompanhamento(string $html): void
     {

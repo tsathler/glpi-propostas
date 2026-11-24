@@ -18,7 +18,7 @@ use GlpiPlugin\Propostas\PropostaBloco;
 use GlpiPlugin\Propostas\PropostaItem;
 use GlpiPlugin\Propostas\Resposta;
 
-define('PLUGIN_PROPOSTAS_VERSION', '1.1.0');
+define('PLUGIN_PROPOSTAS_VERSION', '1.2.0');
 define('PLUGIN_PROPOSTAS_MIN_GLPI', '11.0.0');
 define('PLUGIN_PROPOSTAS_MAX_GLPI', '11.99.99');
 define('PLUGIN_PROPOSTAS_RIGHT', 'plugin_propostas_proposta');

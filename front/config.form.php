@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Propostas - configuração: endereço externo do link público e busca de CNPJ.
+ * Propostas - configuração: endereço externo do link público, busca de CNPJ e chamado automático.
  *
  * @license GPL-3.0-or-later https://www.gnu.org/licenses/gpl-3.0.html
  */
@@ -28,6 +28,8 @@ if (isset($_POST['update'])) {
             'url_publica'         => $url,
             'cnpj_consulta_ativa' => !empty($_POST['cnpj_consulta_ativa']) ? '1' : '0',
             'cnpj_consulta_url'   => $cnpj,
+            'chamado_itilcategories_id' => (string) max(0, (int) ($_POST['chamado_itilcategories_id'] ?? 0)),
+            'chamado_groups_id'         => (string) max(0, (int) ($_POST['chamado_groups_id'] ?? 0)),
         ]);
         Session::addMessageAfterRedirect(htmlescape(__('Configuração salva.', 'propostas')));
     }
@@ -36,13 +38,15 @@ if (isset($_POST['update'])) {
 
 Html::header(__('Propostas', 'propostas'), '', 'config', 'plugin');
 
-$config = Config::getConfigurationValues('plugin:propostas', ['url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url']);
+$config = Config::getConfigurationValues('plugin:propostas', ['url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url', 'chamado_itilcategories_id', 'chamado_groups_id']);
 TemplateRenderer::getInstance()->display('@propostas/config.html.twig', [
     'url_publica'         => (string) ($config['url_publica'] ?? ''),
     'url_efetiva'         => Proposta::getUrlBasePublica(),
     'cnpj_consulta_ativa' => !empty($config['cnpj_consulta_ativa']),
     'cnpj_consulta_url'   => (string) ($config['cnpj_consulta_url'] ?? PROPOSTAS_CNPJ_URL_PADRAO),
     'cnpj_url_padrao'     => PROPOSTAS_CNPJ_URL_PADRAO,
+    'chamado_itilcategories_id' => (int) ($config['chamado_itilcategories_id'] ?? 0),
+    'chamado_groups_id'         => (int) ($config['chamado_groups_id'] ?? 0),
 ]);
 
 Html::footer();
