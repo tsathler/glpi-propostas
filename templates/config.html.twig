@@ -40,7 +40,7 @@
       <hr>
       <h4>{{ __('Chamado automático', 'propostas') }}</h4>
       <p class="text-muted small">
-         {{ __('Ao gerar o link de uma proposta sem chamado vinculado, o plugin abre um chamado (requisição) na entidade da proposta, com o consultor como requerente e técnico. Envio, aceite, dúvida, cancelamento e expiração viram acompanhamentos privados nele. O chamado é fechado manualmente.', 'propostas') }}
+         {{ __('Ao gerar o link de uma proposta sem chamado vinculado, o plugin abre um chamado (requisição) na entidade da proposta, com o consultor como requerente e técnico. Envio, aceite, dúvida, cancelamento e expiração viram acompanhamentos privados nele. No aceite e na expiração, o plugin fecha o chamado; na proposta cancelada, ele continua aberto. Se a proposta for reaberta e reenviada com o chamado já fechado, o plugin abre outro.', 'propostas') }}
       </p>
       <div class="row">
          {{ fields.dropdownField('ITILCategory', 'chamado_itilcategories_id', chamado_itilcategories_id, __('Categoria do chamado', 'propostas'), {

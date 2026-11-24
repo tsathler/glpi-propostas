@@ -5,6 +5,13 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-11-24
+
+### Changed
+
+- O chamado da proposta é fechado automaticamente no aceite e na expiração (o plugin registra a solução e fecha). Na proposta cancelada, ele continua aberto. Antes, o chamado era sempre fechado à mão.
+- Ao gerar o link de uma proposta reaberta cujo chamado já está fechado, o plugin abre um chamado novo (chamado fechado não recebe acompanhamentos).
+
 ## [1.4.1] - 2026-11-24
 
 ### Changed
@@ -163,7 +170,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/tsathler/glpi-propostas/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/tsathler/glpi-propostas/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/tsathler/glpi-propostas/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/tsathler/glpi-propostas/compare/v1.3.0...v1.3.1
