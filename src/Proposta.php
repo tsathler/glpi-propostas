@@ -628,6 +628,11 @@ class Proposta extends CommonDBTM
                     htmlescape($proposta->getNumero()),
                     (int) $proposta->fields['versao']
                 ));
+                $proposta->fecharChamado(sprintf(
+                    '<p>Proposta nº %s (versão %d) expirou sem resposta do cliente.</p>',
+                    htmlescape($proposta->getNumero()),
+                    (int) $proposta->fields['versao']
+                ));
                 $proposta->notificar('expirada');
                 $task->log(sprintf('Proposta %s (versão %d) expirada', $proposta->getNumero(), (int) $proposta->fields['versao']));
             }
@@ -742,6 +747,10 @@ class Proposta extends CommonDBTM
         ]);
         if ($ok) {
             Session::addMessageAfterRedirect(htmlescape(__('Link gerado. A proposta está travada para edição.', 'propostas')));
+            // Chamado fechado (ex.: proposta expirada e reaberta) não recebe acompanhamentos: abre outro.
+            if ((int) $this->fields['tickets_id'] > 0 && $this->chamadoFechado()) {
+                $this->atualizarInterno(['id' => $this->getID(), 'tickets_id' => 0]);
+            }
             if ((int) $this->fields['tickets_id'] <= 0) {
                 $this->abrirChamado();
             }
@@ -1091,6 +1100,12 @@ class Proposta extends CommonDBTM
             htmlescape(Cpf::mascarar($digitos)),
             htmlescape($codigo)
         ));
+        $this->fecharChamado(sprintf(
+            '<p>Proposta nº %s (versão %d) aceita pelo cliente. Código de verificação: %s.</p>',
+            htmlescape($this->getNumero()),
+            (int) $this->fields['versao'],
+            htmlescape($codigo)
+        ));
         $this->notificar('aceita', ['resposta_id' => $id, 'nome' => $nome, 'codigo' => $codigo, 'mensagem' => '']);
 
         return [];
@@ -1186,6 +1201,69 @@ class Proposta extends CommonDBTM
             ]);
         } catch (\Throwable $e) {
             \Toolbox::logInFile('propostas', sprintf("Acompanhamento no chamado %d falhou: %s\n", $tickets_id, $e->getMessage()));
+        }
+    }
+
+    /**
+     * O chamado vinculado está fechado? (Chamado fechado não recebe mais acompanhamentos.)
+     */
+    private function chamadoFechado(): bool
+    {
+        $tickets_id = (int) $this->fields['tickets_id'];
+        $ticket = new \Ticket();
+
+        return $tickets_id > 0
+            && $ticket->getFromDB($tickets_id)
+            && in_array((int) $ticket->fields['status'], $ticket->getClosedStatusArray(), false);
+    }
+
+    /**
+     * Fecha o chamado vinculado (aceite e expiração): registra a solução e fecha, sem notificação do
+     * chamado. Falha não quebra o aceite nem a expiração: fica no log do plugin.
+     */
+    private function fecharChamado(string $solucao): void
+    {
+        $tickets_id = (int) $this->fields['tickets_id'];
+        $ticket = new \Ticket();
+        if ($tickets_id <= 0 || !$ticket->getFromDB($tickets_id)
+            || in_array((int) $ticket->fields['status'], $ticket->getClosedStatusArray(), false)) {
+            return;
+        }
+
+        // O aceite chega pela página pública, sem usuário logado: sem o direito de atualizar chamados,
+        // o GLPI recusa a mudança de status. O fechamento roda como sistema (Session::callAsSystem,
+        // GLPI 11), só aqui. A expiração já roda como ação automática, onde o GLPI não confere direitos.
+        $fechar = static function () use ($ticket, $tickets_id, $solucao): void {
+            if (!in_array((int) $ticket->fields['status'], $ticket->getSolvedStatusArray(), false)) {
+                (new \ITILSolution())->add([
+                    'itemtype'      => \Ticket::class,
+                    'items_id'      => $tickets_id,
+                    'content'       => $solucao,
+                    '_disablenotif' => true,
+                ]);
+            }
+            $ticket->getFromDB($tickets_id);
+            if (!in_array((int) $ticket->fields['status'], $ticket->getClosedStatusArray(), false)) {
+                $ticket->update([
+                    'id'            => $tickets_id,
+                    'status'        => \CommonITILObject::CLOSED,
+                    '_disablenotif' => true,
+                ]);
+            }
+        };
+
+        try {
+            if (method_exists(Session::class, 'callAsSystem')) {
+                Session::callAsSystem($fechar);
+            } else {
+                $fechar();
+            }
+            $ticket->getFromDB($tickets_id);
+            if ((int) $ticket->fields['status'] !== \CommonITILObject::CLOSED) {
+                \Toolbox::logInFile('propostas', sprintf("Chamado %d da proposta %d não foi fechado (status %d).\n", $tickets_id, $this->getID(), (int) $ticket->fields['status']));
+            }
+        } catch (\Throwable $e) {
+            \Toolbox::logInFile('propostas', sprintf("Fechamento do chamado %d falhou: %s\n", $tickets_id, $e->getMessage()));
         }
     }
 
