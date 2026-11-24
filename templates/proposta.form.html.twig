@@ -5,41 +5,112 @@
 {% extends 'generic_show_form.html.twig' %}
 {% import 'components/form/fields_macros.html.twig' as fields %}
 
+{% set travado = {disabled: not editavel} %}
+
 {% block more_fields %}
-   {% if numero %}
-      {{ fields.htmlField('', numero|e, __('Número', 'propostas')) }}
+   {% if not item.isNewItem() %}
+      {{ fields.htmlField('', numero|e ~ ' · ' ~ __('versão', 'propostas') ~ ' ' ~ item.fields['versao'], __('Número', 'propostas')) }}
+      {{ fields.htmlField('', '<span class="badge bg-blue-lt">' ~ status_label|e ~ '</span>', __('Status')) }}
    {% endif %}
 
-   {{ fields.numberField('versao', item.fields['versao'], __('Versão', 'propostas'), {min: 1}) }}
+   {{ fields.textField('solicitante', item.fields['solicitante'], __('Solicitado por', 'propostas'), travado) }}
 
-   {{ fields.dropdownArrayField('status', item.fields['status'], status_list, __('Status'), {
-      disabled: item.isNewItem()
-   }) }}
-
-   {{ fields.textField('solicitante', item.fields['solicitante'], __('Solicitado por', 'propostas')) }}
-
-   {{ fields.dropdownField('User', 'users_id_consultor', item.fields['users_id_consultor'], __('Consultor', 'propostas'), {
+   {{ fields.dropdownField('User', 'users_id_consultor', item.fields['users_id_consultor'], __('Consultor', 'propostas'), travado|merge({
       right: 'all',
       entity: item.fields['entities_id']
-   }) }}
+   })) }}
 
-   {{ fields.dropdownField('Ticket', 'tickets_id', item.fields['tickets_id'], __('Chamado vinculado', 'propostas'), {
+   {{ fields.dropdownField('Ticket', 'tickets_id', item.fields['tickets_id'], __('Chamado vinculado', 'propostas'), travado|merge({
       entity: item.fields['entities_id']
-   }) }}
+   })) }}
 
-   {{ fields.dateField('data_emissao', item.fields['data_emissao'], __('Emissão', 'propostas')) }}
+   {{ fields.dateField('data_emissao', item.fields['data_emissao'], __('Emissão', 'propostas'), travado) }}
 
-   {{ fields.numberField('validade_dias', item.fields['validade_dias'], __('Validade (dias)', 'propostas'), {min: 1}) }}
+   {{ fields.numberField('validade_dias', item.fields['validade_dias'], __('Validade (dias)', 'propostas'), travado|merge({min: 1})) }}
 
-   {{ fields.numberField('aviso_previo_dias', item.fields['aviso_previo_dias'], __('Aviso prévio (dias)', 'propostas'), {min: 0}) }}
+   {{ fields.numberField('aviso_previo_dias', item.fields['aviso_previo_dias'], __('Aviso prévio (dias)', 'propostas'), travado|merge({min: 0})) }}
 
    {% if totais %}
       {{ fields.htmlField('', 'R$ ' ~ totais['recorrente'] ~ ' / ' ~ __('mês', 'propostas'), __('Investimento mensal', 'propostas')) }}
       {{ fields.htmlField('', 'R$ ' ~ totais['pontual'], __('Implantação (pagamento único)', 'propostas')) }}
    {% endif %}
 
-   {{ fields.textareaField('condicoes', item.fields['condicoes'], __('Condições comerciais', 'propostas'), {
-      enable_richtext: true,
-      full_width: true
-   }) }}
+   {% if editavel %}
+      {{ fields.textareaField('condicoes', item.fields['condicoes'], __('Condições comerciais', 'propostas'), {
+         enable_richtext: true,
+         full_width: true
+      }) }}
+   {% else %}
+      {# Travada: mostra o texto formatado em vez do HTML cru num campo desabilitado. #}
+      {{ fields.htmlField('', item.fields['condicoes']|safe_html, __('Condições comerciais', 'propostas'), {
+         full_width: true
+      }) }}
+   {% endif %}
+
+   {% if not item.isNewItem() %}
+      <div class="col-12 mt-3">
+         <div class="card bg-light-lt">
+            <div class="card-body">
+               <h4 class="card-title mb-2">
+                  <i class="ti ti-link"></i> {{ __('Link para o cliente', 'propostas') }}
+               </h4>
+
+               {% if link_publico %}
+                  <div class="input-group mb-2">
+                     <input type="text" class="form-control" id="propostas-link" value="{{ link_publico }}" readonly>
+                     <button type="button" class="btn btn-outline-secondary" id="propostas-copiar">
+                        <i class="ti ti-copy"></i> {{ __('Copiar', 'propostas') }}
+                     </button>
+                     <a class="btn btn-outline-secondary" href="{{ link_publico }}" target="_blank" rel="noopener">
+                        <i class="ti ti-external-link"></i> {{ __('Abrir', 'propostas') }}
+                     </a>
+                  </div>
+                  <div class="text-muted small mb-2">
+                     {% if link_expirado %}
+                        <span class="text-danger">{{ __('Link expirado em', 'propostas') }} {{ link_expira|formatted_datetime }}.</span>
+                     {% else %}
+                        {{ __('Válido até', 'propostas') }} {{ link_expira|formatted_datetime }}.
+                     {% endif %}
+                     {{ __('Abrir o link estando logado no GLPI não conta como visualização do cliente.', 'propostas') }}
+                  </div>
+               {% elseif editavel %}
+                  <p class="text-muted mb-2">
+                     {{ __('Ao gerar o link, a proposta é travada para edição e passa para "Enviada".', 'propostas') }}
+                  </p>
+               {% endif %}
+
+               <div class="d-flex flex-wrap gap-2">
+                  {% if pode_gerar %}
+                     <button type="submit" name="gerar_link" value="1" class="btn btn-primary">
+                        <i class="ti ti-send"></i> {{ __('Gerar link', 'propostas') }}
+                     </button>
+                  {% endif %}
+                  {% if pode_reabrir %}
+                     <button type="submit" name="reabrir" value="1" class="btn btn-outline-warning"
+                             onclick="return confirm('{{ __('Reabrir cria uma nova versão e invalida o link atual. Continuar?', 'propostas')|e('js') }}');">
+                        <i class="ti ti-lock-open"></i> {{ __('Reabrir para edição', 'propostas') }}
+                     </button>
+                  {% endif %}
+                  {% if pode_cancelar %}
+                     <button type="submit" name="cancelar" value="1" class="btn btn-outline-danger"
+                             onclick="return confirm('{{ __('Cancelar a proposta e invalidar o link?', 'propostas')|e('js') }}');">
+                        <i class="ti ti-ban"></i> {{ __('Cancelar proposta', 'propostas') }}
+                     </button>
+                  {% endif %}
+               </div>
+            </div>
+         </div>
+      </div>
+
+      {% if link_publico %}
+         <script>
+            document.getElementById('propostas-copiar')?.addEventListener('click', function () {
+               const campo = document.getElementById('propostas-link');
+               campo.select();
+               navigator.clipboard?.writeText(campo.value);
+               this.innerHTML = '<i class="ti ti-check"></i> {{ __('Copiado', 'propostas')|e('js') }}';
+            });
+         </script>
+      {% endif %}
+   {% endif %}
 {% endblock %}

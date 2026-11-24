@@ -1,0 +1,86 @@
+{#
+ # Propostas - base da página pública. Não usa CSS/JS do GLPI: em produção só a rota
+ # pública fica exposta, então tudo o que a página precisa vem embutido aqui.
+ # @license GPL-3.0-or-later
+ #}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1">
+   <meta name="robots" content="noindex, nofollow">
+   <meta name="referrer" content="no-referrer">
+   <title>{% block titulo %}Proposta{% endblock %}</title>
+   <style>
+      :root {
+         --fundo: #f4f6fa; --cartao: #ffffff; --texto: #111827; --suave: #6b7280; --borda: #e5e7eb;
+         --escuro: #0b1220; --escuro-2: #13213d; --destaque: #2563eb; --destaque-claro: #dbeafe; --ok: #059669;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body {
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+         background: var(--fundo); color: var(--texto); line-height: 1.5; font-size: 15px;
+      }
+      .wrap { max-width: 820px; margin: 0 auto; padding: 0 16px; }
+      .topo { background: linear-gradient(135deg, var(--escuro) 0%, var(--escuro-2) 100%); color: #fff; padding: 40px 0 96px; }
+      .rotulo { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; font-weight: 600; color: #93c5fd; }
+      .topo h1 { font-size: 32px; line-height: 1.2; margin: 8px 0 4px; }
+      .topo .sub { color: #93c5fd; font-weight: 500; }
+      .meta { display: flex; flex-wrap: wrap; gap: 16px 32px; margin-top: 28px; }
+      .meta div span { display: block; }
+      .meta .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; }
+      .meta .v { font-weight: 600; }
+      .cards { display: grid; grid-template-columns: 2fr 1.3fr; gap: 16px; margin-top: -64px; }
+      .cards.um { grid-template-columns: minmax(0, 520px); }
+      .card { background: var(--cartao); border-radius: 14px; padding: 22px; box-shadow: 0 6px 24px rgba(15, 23, 42, .08); }
+      .card.forte { background: linear-gradient(135deg, #0f1f45 0%, #1e3a8a 100%); color: #fff; }
+      .card .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; opacity: .75; }
+      .card .valor { font-size: 28px; font-weight: 700; margin: 6px 0 2px; }
+      .card .valor small { font-size: 14px; font-weight: 500; opacity: .75; }
+      .card .nota { font-size: 13px; opacity: .75; }
+      section { margin-top: 36px; }
+      .chip { display: inline-block; background: var(--destaque); color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 3px 10px; }
+      h2 { font-size: 20px; margin: 8px 0 14px; }
+      .barra { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--borda); margin-bottom: 8px; }
+      .linha { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--borda); }
+      .linha:last-child { border-bottom: 0; }
+      .linha .nome { display: flex; align-items: flex-start; gap: 10px; font-weight: 600; }
+      .ponto { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: 0 0 10px; }
+      .detalhe { display: block; font-weight: 400; color: var(--suave); font-size: 13px; }
+      .desconto { color: var(--ok); font-weight: 600; }
+      .linha .sub { font-weight: 700; white-space: nowrap; text-align: right; }
+      .linha .sub small { font-weight: 500; color: var(--suave); }
+      .total { display: flex; justify-content: space-between; padding-top: 14px; margin-top: 4px; border-top: 2px solid var(--texto); font-weight: 700; font-size: 17px; }
+      .condicoes { font-size: 14px; }
+      .condicoes ul { padding-left: 20px; }
+      .condicoes p:first-child { margin-top: 0; }
+      .fixos { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+      .fixos .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--suave); }
+      .fixos .v { font-weight: 600; }
+      .acoes { display: flex; justify-content: flex-end; padding: 16px 0 0; }
+      .botao { appearance: none; border: 1px solid var(--borda); background: #fff; color: var(--texto); border-radius: 10px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+      .rodape { margin: 48px 0 0; padding: 22px 0; background: var(--escuro); color: #9ca3af; font-size: 13px; }
+      .aviso { text-align: center; padding: 96px 16px; }
+      .aviso h1 { font-size: 26px; margin-bottom: 8px; }
+      .aviso p { color: var(--suave); max-width: 460px; margin: 0 auto; }
+      @media (max-width: 640px) {
+         .topo h1 { font-size: 26px; }
+         .cards { grid-template-columns: 1fr; }
+         .linha { flex-direction: column; align-items: flex-start; }
+         .linha .sub { text-align: left; padding-left: 20px; }
+      }
+      @media print {
+         body { background: #fff; }
+         .topo { padding: 24px 0 72px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+         .card { box-shadow: none; border: 1px solid var(--borda); }
+         .card.forte, .chip, .barra, .ponto { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+         .acoes, .rodape { display: none; }
+         section { break-inside: avoid; }
+      }
+   </style>
+</head>
+<body>
+   {% block conteudo %}{% endblock %}
+</body>
+</html>

@@ -3,6 +3,12 @@
  # @license GPL-3.0-or-later
  #}
 <div class="card">
+   {% if travada %}
+      <div class="alert alert-info m-3 mb-0">
+         <i class="ti ti-lock"></i>
+         {{ __('A proposta já foi enviada e os itens estão travados. Para alterar, use "Reabrir para edição" na aba Proposta.', 'propostas') }}
+      </div>
+   {% endif %}
    {% if canedit %}
       <form method="post" action="{{ form_url }}" class="card-body border-bottom">
          <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">

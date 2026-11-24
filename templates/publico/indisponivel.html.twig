@@ -1,0 +1,15 @@
+{#
+ # Propostas - link inexistente, revogado ou expirado. Não revela qual dos casos,
+ # exceto "expirada", que só aparece para quem tem um token válido.
+ # @license GPL-3.0-or-later
+ #}
+{% extends '@propostas/publico/_base.html.twig' %}
+
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block conteudo %}
+<main class="aviso">
+   <h1>{{ titulo }}</h1>
+   <p>{{ mensagem }}</p>
+</main>
+{% endblock %}

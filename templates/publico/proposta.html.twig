@@ -1,0 +1,128 @@
+{#
+ # Propostas - página pública da proposta.
+ # @license GPL-3.0-or-later
+ #}
+{% extends '@propostas/publico/_base.html.twig' %}
+
+{% block titulo %}Proposta {{ p.numero }} — {{ p.titulo }}{% endblock %}
+
+{% block conteudo %}
+<header class="topo">
+   <div class="wrap">
+      <div class="rotulo">Proposta comercial · nº {{ p.numero }}</div>
+      <h1>{{ p.titulo }}</h1>
+      <div class="sub">Versão {{ p.versao }}</div>
+
+      <div class="meta">
+         <div><span class="k">Emissão</span><span class="v">{{ p.emissao }}</span></div>
+         <div><span class="k">Validade</span><span class="v">{{ p.validade_dias }} dias (até {{ p.valida_ate }})</span></div>
+         {% if p.solicitante %}
+            <div><span class="k">Solicitado por</span><span class="v">{{ p.solicitante }}</span></div>
+         {% endif %}
+         {% if p.consultor %}
+            <div><span class="k">Consultor</span><span class="v">{{ p.consultor }}</span></div>
+         {% endif %}
+      </div>
+   </div>
+</header>
+
+<main class="wrap">
+   <div class="cards{{ (p.recorrentes and p.pontuais) ? '' : ' um' }}">
+      {% if p.recorrentes %}
+         <div class="card forte">
+            <div class="k">Investimento mensal</div>
+            <div class="valor">{{ p.total_mensal }} <small>/mês</small></div>
+            <div class="nota">Recorrente</div>
+         </div>
+      {% endif %}
+      {% if p.pontuais %}
+         <div class="card{{ p.recorrentes ? '' : ' forte' }}">
+            <div class="k">Implantação</div>
+            <div class="valor">{{ p.total_unico }}</div>
+            <div class="nota">Pagamento único</div>
+         </div>
+      {% endif %}
+   </div>
+
+   {% if p.recorrentes %}
+      <section>
+         <span class="chip">Recorrente</span>
+         <h2>O que está incluído por mês</h2>
+         <div class="card">
+            <div class="barra" aria-hidden="true">
+               {% for i in p.recorrentes %}
+                  <span style="width: {{ i.percentual }}%; background: {{ i.cor }};"></span>
+               {% endfor %}
+            </div>
+            {% for i in p.recorrentes %}
+               <div class="linha">
+                  <div class="nome">
+                     <span class="ponto" style="background: {{ i.cor }};"></span>
+                     <div>
+                        {{ i.nome }}
+                        <span class="detalhe">
+                           {{ i.quantidade }} × {{ i.unitario }}
+                           {% if i.desconto %}<span class="desconto">−{{ i.desconto }}</span>{% endif %}
+                        </span>
+                     </div>
+                  </div>
+                  <div class="sub">{{ i.subtotal }} <small>/mês</small></div>
+               </div>
+            {% endfor %}
+            <div class="total"><span>Total mensal</span><span>{{ p.total_mensal }}</span></div>
+         </div>
+      </section>
+   {% endif %}
+
+   {% if p.pontuais %}
+      <section>
+         <span class="chip">Pontual</span>
+         <h2>Implantação</h2>
+         <div class="card">
+            {% for i in p.pontuais %}
+               <div class="linha">
+                  <div class="nome">
+                     <span class="ponto" style="background: {{ i.cor }};"></span>
+                     <div>
+                        {{ i.nome }}
+                        <span class="detalhe">
+                           {{ i.quantidade }} × {{ i.unitario }} · pagamento único
+                           {% if i.desconto %}<span class="desconto">−{{ i.desconto }}</span>{% endif %}
+                        </span>
+                     </div>
+                  </div>
+                  <div class="sub">{{ i.subtotal }}</div>
+               </div>
+            {% endfor %}
+            <div class="total"><span>Total da implantação</span><span>{{ p.total_unico }}</span></div>
+         </div>
+      </section>
+   {% endif %}
+
+   <section>
+      <h2>Condições comerciais</h2>
+      <div class="card">
+         <div class="fixos">
+            <div><span class="k">Aviso prévio</span><br><span class="v">{{ p.aviso_previo }} dias</span></div>
+            <div><span class="k">Validade da proposta</span><br><span class="v">{{ p.validade_dias }} dias</span></div>
+            <div><span class="k">Emissão</span><br><span class="v">{{ p.emissao }}</span></div>
+            {% if p.consultor %}
+               <div><span class="k">Consultor</span><br><span class="v">{{ p.consultor }}</span></div>
+            {% endif %}
+         </div>
+         {% if p.condicoes %}
+            <div class="condicoes">{{ p.condicoes|safe_html }}</div>
+         {% endif %}
+      </div>
+      <div class="acoes">
+         <button type="button" class="botao" onclick="window.print()">Imprimir / salvar em PDF</button>
+      </div>
+   </section>
+</main>
+
+<footer class="rodape">
+   <div class="wrap">
+      Proposta nº {{ p.numero }} · versão {{ p.versao }}. Para aceitar ou tirar dúvidas, fale com o seu consultor.
+   </div>
+</footer>
+{% endblock %}

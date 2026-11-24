@@ -75,6 +75,32 @@ class PropostaItem extends CommonDBChild
         return $itens;
     }
 
+    /**
+     * Itens só mudam enquanto a proposta é rascunho.
+     */
+    private function isPropostaEditavel(int $propostas_id): bool
+    {
+        $proposta = new Proposta();
+
+        return $proposta->getFromDB($propostas_id) && $proposta->isEditavel();
+    }
+
+    public function canCreateItem(): bool
+    {
+        return $this->isPropostaEditavel((int) ($this->fields[self::$items_id] ?? $this->input[self::$items_id] ?? 0))
+            && parent::canCreateItem();
+    }
+
+    public function canUpdateItem(): bool
+    {
+        return $this->isPropostaEditavel((int) $this->fields[self::$items_id]) && parent::canUpdateItem();
+    }
+
+    public function canPurgeItem(): bool
+    {
+        return $this->isPropostaEditavel((int) $this->fields[self::$items_id]) && parent::canPurgeItem();
+    }
+
     public function prepareInputForAdd($input)
     {
         $input = $this->validar($input, true);
@@ -175,7 +201,8 @@ class PropostaItem extends CommonDBChild
             'linhas'    => $linhas,
             'totais'    => $proposta->getTotaisFormatados(),
             'tipos'     => self::getTipos(),
-            'canedit'   => $proposta->can($proposta->getID(), UPDATE),
+            'canedit'   => $proposta->isEditavel() && $proposta->can($proposta->getID(), UPDATE),
+            'travada'   => !$proposta->isEditavel(),
             'form_url'  => self::getFormURL(),
             'items_id'  => self::$items_id,
         ]);
