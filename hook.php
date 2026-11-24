@@ -296,6 +296,23 @@ function plugin_propostas_install(): bool
         ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation} ROW_FORMAT=DYNAMIC");
     }
 
+    // 1.4.0: desconto especial do modelo (caixa na criação da proposta) e exibição dos valores ao
+    // cliente: 'total' (quantidade, subtotal e totais, o padrão) ou 'unidade' (preço por unidade, de/por).
+    $table = 'glpi_plugin_propostas_modelos';
+    $migration->addField($table, 'desconto_especial_pct', 'decimal(5,2) NOT NULL DEFAULT 0.00', ['after' => 'aviso_previo_dias']);
+    $migration->addField($table, 'exibicao', "varchar(20) NOT NULL DEFAULT 'total'", ['after' => 'desconto_especial_pct']);
+    $migration->migrationOneTable($table);
+
+    $table = 'glpi_plugin_propostas_propostas';
+    $migration->addField($table, 'exibicao', "varchar(20) NOT NULL DEFAULT 'total'", ['after' => 'aviso_previo_dias']);
+    $migration->migrationOneTable($table);
+
+    // 1.4.0: bloco de texto mostrado depois dos valores e das condições (ex.: agradecimento, assinatura).
+    foreach (['glpi_plugin_propostas_blocos', 'glpi_plugin_propostas_propostablocos'] as $table) {
+        $migration->addField($table, 'depois_dos_valores', 'tinyint NOT NULL DEFAULT 0', ['after' => 'conteudo']);
+        $migration->migrationOneTable($table);
+    }
+
     // Colunas padrão das listas, só se a lista ainda não tiver nenhuma.
     // Números = ids do rawSearchOptions() de cada classe.
     $colunas = [

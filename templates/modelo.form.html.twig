@@ -6,10 +6,17 @@
 {% import 'components/form/fields_macros.html.twig' as fields %}
 
 {% block more_fields %}
-   {{ fields.dropdownYesNo('is_active', item.fields['is_active'], __('Active')) }}
    {{ fields.numberField('ordem', item.fields['ordem'], __('Ordem na lista', 'propostas'), {min: 0}) }}
    {{ fields.numberField('validade_dias', item.fields['validade_dias'], __('Validade padrão (dias)', 'propostas'), {min: 1}) }}
-   {{ fields.numberField('aviso_previo_dias', item.fields['aviso_previo_dias'], __('Aviso prévio padrão (dias)', 'propostas'), {min: 0}) }}
+   {{ fields.numberField('desconto_especial_pct', item.fields['desconto_especial_pct'], __('Desconto sugerido (%)', 'propostas'), {
+      min: 0,
+      max: 100,
+      step: 0.01,
+      helper: __('Vem preenchido no campo de desconto da proposta nova. O consultor decide se aplica e pode mudar o percentual.', 'propostas')
+   }) }}
+   {{ fields.dropdownArrayField('exibicao', item.fields['exibicao'], exibicoes, __('Valores na página do cliente', 'propostas'), {
+      helper: __('Preço por unidade: para valores cobrados por pessoa ou por unidade (ex.: por participante ativo por mês). Mostra cada preço, com o valor de antes quando há desconto, e não soma totais.', 'propostas')
+   }) }}
 
    {{ fields.textareaField('condicoes', item.fields['condicoes'], __('Condições comerciais', 'propostas'), {
       enable_richtext: true,
@@ -19,7 +26,7 @@
    <div class="col-12">
       <div class="alert alert-info mb-0">
          <i class="ti ti-info-circle"></i>
-         {{ __('Na criação da proposta, validade, aviso prévio, condições, itens e blocos de texto deste modelo são copiados para ela. Mudar o modelo depois só vale para propostas novas.', 'propostas') }}
+         {{ __('Na criação da proposta, validade, condições, itens e blocos de texto deste modelo são copiados para ela. Mudar o modelo depois só vale para propostas novas.', 'propostas') }}
       </div>
    </div>
 {% endblock %}
