@@ -1,46 +1,78 @@
 # Propostas (plugin para GLPI 11)
 
-Propostas comerciais dentro do GLPI: cabeçalho, itens recorrentes e pontuais com quantidade, valor unitário e desconto, e totais calculados. Nas próximas versões, o cliente poderá abrir a proposta por um link público e aceitá-la ou enviar dúvidas, sem login no GLPI.
+Propostas comerciais dentro do GLPI. O consultor monta a proposta com itens recorrentes e pontuais e gera um link. O cliente abre a proposta nesse link, sem login no GLPI, e pode aceitá-la ou enviar dúvidas.
 
 ## Requisitos
 
 - GLPI 11.0 ou superior (testado no 11.0.4)
-- PHP 8.2 ou superior
+- PHP 8.2 ou superior, com `mbstring`
 
 ## Instalação
 
+Baixe o zip da [última release](https://github.com/tsathler/glpi-propostas/releases/latest) e extraia dentro da pasta `plugins` do GLPI. A pasta precisa se chamar exatamente `propostas`.
+
 ```bash
-cd /var/www/html/glpi/plugins
-# copie a pasta "propostas" para cá (o nome da pasta precisa ser exatamente "propostas")
-sudo -u www-data php ../bin/console plugin:install propostas --username=<seu login>
-sudo -u www-data php ../bin/console plugin:activate propostas
+cd /caminho/do/glpi
+sudo -u www-data php bin/console plugin:install propostas
+sudo -u www-data php bin/console plugin:activate propostas
+sudo -u www-data php bin/console cache:clear
 ```
 
-Depois de instalar, os perfis que administram a configuração recebem acesso total. Para liberar outros perfis, use **Administração > Perfis**. Saia e entre de novo no GLPI para o menu aparecer em **Ferramentas > Propostas**.
+- **Acesso:** os perfis que podem alterar a Configuração recebem acesso total na instalação. Os outros perfis são liberados em **Administração > Perfis**.
+- **Menu:** saia e entre de novo no GLPI para o menu aparecer em **Ferramentas > Propostas**.
+- **Atualizar:** troque a pasta e rode os mesmos comandos, com `plugin:install propostas --force`. O `cache:clear` faz o GLPI carregar as rotas novas.
 
-Ao atualizar, rode também `sudo -u www-data php ../bin/console cache:clear`, para o GLPI carregar a rota pública do plugin.
+## Funcionalidades
 
-## O que já funciona (0.4.0)
+- **Propostas:** menu **Ferramentas > Propostas**, com lista e busca.
+- **Cadastro:** título, solicitante, consultor, chamado vinculado, emissão, validade, aviso prévio e condições comerciais.
+- **Itens:** aba **Itens** com linhas recorrentes (mensais) ou pontuais (pagamento único), cada uma com quantidade, valor unitário, desconto, subtotal e totais.
+- **Link para o cliente:** gerar, copiar, reabrir como nova versão ou cancelar. A página pública não pede login e não usa CSS nem JavaScript do GLPI.
+- **Trava de edição:** a proposta enviada fica travada. Para mudar valores, é preciso reabrir, o que cria uma nova versão e invalida o link anterior.
+- **Resposta do cliente:** o cliente **aceita** (nome, CPF e declaração) ou envia **dúvidas**. O aceite grava um código de verificação dos valores aceitos. Aceite e dúvida viram acompanhamento privado no chamado vinculado.
+- **Abas da proposta:** **Respostas do cliente** e **Acessos ao link**.
+- **Notificações ao consultor:** proposta aberta, aceita e com dúvida. Exigem as notificações por e-mail ativas no GLPI.
+- **Duplicar:** cria um rascunho novo a partir de uma proposta.
+- **Expiração automática:** a ação automática diária **expirar** marca como *Expirada* a proposta cujo link venceu.
 
-- Menu **Ferramentas > Propostas**, com lista e busca
-- Cadastro da proposta: título, solicitante, consultor, chamado vinculado, emissão, validade, aviso prévio e condições comerciais
-- Aba **Itens**: incluir e remover linhas recorrentes ou pontuais, com subtotal e totais
-- **Link para o cliente**: gerar, copiar, reabrir como nova versão ou cancelar. A página pública não pede login e mostra a proposta no formato de proposta comercial
-- Proposta enviada fica travada para edição
-- O cliente **aceita** (nome, CPF e declaração, com código de verificação dos valores) ou envia **dúvidas** pela própria página; as respostas viram acompanhamento privado no chamado vinculado
-- Abas **Respostas do cliente** e **Acessos ao link**
-- Notificações para o consultor: proposta aberta, aceita e com dúvida (exigem as notificações por e-mail ativas no GLPI)
-- **Duplicar** uma proposta como novo rascunho
-- Ação automática diária **expirar**, que marca como *Expirada* a proposta enviada cujo link venceu (roda pelo cron do GLPI)
-- Histórico de alterações
+## Segurança do link público
 
-## Expor o link para fora da rede
+- **Token:** 32 bytes aleatórios (base64url, 43 caracteres). O banco guarda o SHA-256 do token, usado na busca, e uma cópia cifrada com a chave do GLPI, que permite ao consultor copiar o link de novo.
+- **Validade:** o link vale até as 23:59:59 do último dia de validade. Link vencido responde 410; token inexistente ou revogado responde 404.
+- **Proteção dos envios:** o GLPI confere o token anti-falsificação (CSRF). O limite é de 10 envios por IP por hora, e o banco guarda só o hash do IP.
+- **CPF:** guardado cifrado, mais uma versão mascarada (`***.456.789-**`). O CPF completo só aparece para quem pode editar a proposta.
+- **Código de verificação:** é o SHA-256 de número, versão, título, datas, condições, itens e totais. A aba Respostas mostra se o aceite ainda confere com os valores atuais.
+- **Cabeçalhos:** a página envia `X-Robots-Tag: noindex`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer` e `X-Frame-Options: DENY`.
 
-O GLPI pode continuar só na rede interna. Crie um `server` no Nginx para o endereço externo que libere **apenas** a rota pública do plugin e informe esse endereço em **Configuração > Plug-ins > Propostas**. Exemplo em [docs/desenho.md](docs/desenho.md).
+## Expor só o link público
 
-## Roteiro
+O GLPI pode ficar só na rede interna. Para o cliente abrir o link de fora, crie no Nginx um `server` para o endereço externo que libere **apenas** as rotas públicas do plugin. Depois informe esse endereço em **Configuração > Plug-ins > Propostas**. Exemplo:
 
-Veja [docs/desenho.md](docs/desenho.md).
+```nginx
+server {
+    listen 443 ssl;
+    server_name propostas.exemplo.com.br;
+    # ssl_certificate / ssl_certificate_key do seu certificado
+
+    root /caminho/do/glpi/public;
+
+    location ~ ^/plugins/propostas/p/[A-Za-z0-9_-]{43}(/(aceitar|duvida))?$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root/index.php;
+        fastcgi_pass unix:/run/php/php-fpm.sock;   # ajuste para o seu PHP-FPM
+    }
+
+    location / { return 404; }
+}
+```
+
+Se o endereço externo ficar em branco, os links usam o "URL da aplicação" do GLPI. Em ambientes clonados, confira se esse endereço aponta para o servidor certo.
+
+## Notas para quem mantém o plugin
+
+- **Rotas POST no GLPI 11.0.4:** o `PluginsRouterListener` não passa o método HTTP ao roteador de plugins, então rotas com `methods: ['POST']` nunca casam. As rotas `/aceitar` e `/duvida` não restringem o método, e o controller confere o POST.
+- **Testes:** cálculos e CPF ficam em `src/Calculo.php` e `src/Cpf.php`, sem dependência do GLPI. Para rodar os testes: `composer install && composer test`.
+- **Hash do aceite:** o teste do hash fixa o resultado de um exemplo. Mudar o formato de `Calculo::hashValores()` faz os aceites antigos deixarem de conferir.
 
 ## Licença
 

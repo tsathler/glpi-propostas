@@ -6,7 +6,7 @@
  * Rotas: GET  /plugins/propostas/p/{token}
  *        POST /plugins/propostas/p/{token}/aceitar
  *        POST /plugins/propostas/p/{token}/duvida
- * Em produção, só estas rotas devem ficar expostas para fora (ver docs/desenho.md).
+ * Para acesso externo, exponha só estas rotas (exemplo de Nginx no README).
  * Os POST passam pela checagem de CSRF do próprio GLPI (campo _glpi_csrf_token).
  *
  * @license GPL-3.0-or-later https://www.gnu.org/licenses/gpl-3.0.html
