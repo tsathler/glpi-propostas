@@ -92,7 +92,8 @@
    })) }}
 
    {{ fields.dropdownField('Ticket', 'tickets_id', item.fields['tickets_id'], __('Chamado vinculado', 'propostas'), travado|merge({
-      entity: item.fields['entities_id']
+      entity: item.fields['entities_id'],
+      helper: __('Em branco, o plugin abre um chamado ao gerar o link.', 'propostas')
    })) }}
 
    {{ fields.dateField('data_emissao', item.fields['data_emissao'], __('Emissão', 'propostas'), travado) }}

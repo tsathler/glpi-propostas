@@ -32,7 +32,8 @@ sudo -u www-data php bin/console cache:clear
 - **Itens:** aba **Itens** com linhas recorrentes (mensais) ou pontuais (pagamento único), cada uma com quantidade, valor unitário, desconto, subtotal e totais.
 - **Link para o cliente:** gerar (exige razão social e CNPJ válido), copiar, reabrir como nova versão ou cancelar. A página pública não pede login e não usa CSS nem JavaScript do GLPI; mostra a empresa na capa e os blocos de texto antes dos itens.
 - **Trava de edição:** a proposta enviada fica travada. Para mudar valores, é preciso reabrir, o que cria uma nova versão e invalida o link anterior.
-- **Resposta do cliente:** o cliente **aceita** em nome da empresa (nome, CPF, cargo e declaração) ou envia **dúvidas**. O aceite grava um código de verificação dos valores aceitos. Aceite e dúvida viram acompanhamento privado no chamado vinculado.
+- **Resposta do cliente:** o cliente **aceita** em nome da empresa (nome, CPF, cargo e declaração) ou envia **dúvidas**. O aceite grava um código de verificação dos valores aceitos.
+- **Chamado da proposta:** ao gerar o link de uma proposta sem chamado vinculado, o plugin abre um chamado (requisição) na entidade da proposta, com o consultor como requerente e técnico; categoria e grupo técnico são opcionais, em **Configuração > Plug-ins > Propostas**. Envio, aceite, dúvida, cancelamento e expiração viram acompanhamentos privados no chamado, que é fechado manualmente. Quem preferir pode vincular um chamado existente antes de gerar o link.
 - **Abas da proposta:** **Respostas do cliente** e **Acessos ao link**.
 - **Notificações ao consultor:** proposta aberta, aceita e com dúvida. Exigem as notificações por e-mail ativas no GLPI.
 - **Duplicar:** cria um rascunho novo a partir de uma proposta.

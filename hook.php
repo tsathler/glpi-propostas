@@ -362,7 +362,7 @@ function plugin_propostas_uninstall(): bool
     ProfileRight::deleteProfileRights([PLUGIN_PROPOSTAS_RIGHT, PLUGIN_PROPOSTAS_RIGHT_MODELO]);
     unset($_SESSION['glpiactiveprofile'][PLUGIN_PROPOSTAS_RIGHT], $_SESSION['glpiactiveprofile'][PLUGIN_PROPOSTAS_RIGHT_MODELO]);
 
-    Config::deleteConfigurationValues('plugin:propostas', ['url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url']);
+    Config::deleteConfigurationValues('plugin:propostas', ['url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url', 'chamado_itilcategories_id', 'chamado_groups_id']);
 
     return true;
 }

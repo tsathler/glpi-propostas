@@ -5,6 +5,12 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+### Added
+
+- **Chamado automático:** ao gerar o link de uma proposta sem chamado vinculado, o plugin abre um chamado (requisição) na entidade da proposta, com o consultor como requerente e técnico, e grava o vínculo. Se a abertura falhar, o link é gerado mesmo assim e o consultor recebe um aviso.
+- Categoria e grupo técnico do chamado automático na configuração do plugin (opcionais).
+- Acompanhamentos privados no chamado vinculado também no envio do link (com a validade), no cancelamento e na expiração.
+
 ## [1.1.0] - 2026-11-24
 
 ### Added
