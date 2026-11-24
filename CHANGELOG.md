@@ -5,6 +5,12 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-11-24
+
+### Changed
+
+- Campo CPF do aceite: os pontos e o traço entram sozinhos enquanto o cliente digita (com ou sem pontuação, colado ou digitado) e, com os 11 dígitos, um CPF com dígitos verificadores errados mostra "CPF inválido — confira os números." no próprio campo e não deixa enviar. O servidor continua conferindo.
+
 ## [1.4.2] - 2026-11-24
 
 ### Changed
@@ -170,7 +176,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.4.2...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.4.3...HEAD
+[1.4.3]: https://github.com/tsathler/glpi-propostas/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/tsathler/glpi-propostas/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/tsathler/glpi-propostas/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/tsathler/glpi-propostas/compare/v1.3.1...v1.4.0
