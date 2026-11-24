@@ -60,6 +60,7 @@ class Proposta extends CommonDBTM
         $tabs = [];
         $this->addDefaultFormTab($tabs);
         $this->addStandardTab(PropostaItem::class, $tabs, $options);
+        $this->addStandardTab(PropostaBloco::class, $tabs, $options);
         $this->addStandardTab(Resposta::class, $tabs, $options);
         $this->addStandardTab(Acesso::class, $tabs, $options);
         $this->addStandardTab(Log::class, $tabs, $options);
@@ -95,6 +96,52 @@ class Proposta extends CommonDBTM
         $input['status'] = self::STATUS_RASCUNHO;
         $input['versao'] = 1;
 
+        // Com modelo: validade, aviso prévio e condições vêm dele (itens e blocos em post_addItem).
+        $modelos_id = (int) ($input['plugin_propostas_modelos_id'] ?? 0);
+        if ($modelos_id > 0 && empty($input['_sem_copiar_modelo'])) {
+            $modelo = new Modelo();
+            if (!$modelo->getFromDB($modelos_id) || !$modelo->fields['is_active']) {
+                Session::addMessageAfterRedirect(htmlescape(__('Modelo de proposta inválido ou inativo.', 'propostas')), false, ERROR);
+                return false;
+            }
+            $input = $modelo->aplicarNoInput($input);
+        }
+
+        return $this->validarEmpresa($input);
+    }
+
+    public function post_addItem(): void
+    {
+        $modelos_id = (int) ($this->fields['plugin_propostas_modelos_id'] ?? 0);
+        if ($modelos_id > 0 && empty($this->input['_sem_copiar_modelo'])) {
+            $modelo = new Modelo();
+            if ($modelo->getFromDB($modelos_id)) {
+                $modelo->copiarParaProposta($this->getID());
+            }
+        }
+    }
+
+    /**
+     * CNPJ opcional no rascunho, mas, se informado, precisa ter dígitos válidos. Gravado formatado.
+     *
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>|false
+     */
+    private function validarEmpresa(array $input): array|false
+    {
+        if (array_key_exists('empresa_cnpj', $input) && trim((string) $input['empresa_cnpj']) !== '') {
+            if (!Cnpj::validar((string) $input['empresa_cnpj'])) {
+                Session::addMessageAfterRedirect(htmlescape(__('CNPJ inválido: confira os dígitos.', 'propostas')), false, ERROR);
+                return false;
+            }
+            $input['empresa_cnpj'] = Cnpj::formatar((string) $input['empresa_cnpj']);
+        }
+        foreach (['empresa_razao_social', 'empresa_nome_fantasia'] as $campo) {
+            if (isset($input[$campo])) {
+                $input[$campo] = trim((string) $input[$campo]);
+            }
+        }
+
         return $input;
     }
 
@@ -109,6 +156,8 @@ class Proposta extends CommonDBTM
         foreach (self::CAMPOS_INTERNOS as $campo) {
             unset($input[$campo]);
         }
+        // O modelo de origem não muda depois da criação.
+        unset($input['plugin_propostas_modelos_id']);
 
         if (!$this->isEditavel()) {
             $ignorados = [];
@@ -128,9 +177,11 @@ class Proposta extends CommonDBTM
                     WARNING
                 );
             }
+
+            return $input;
         }
 
-        return $input;
+        return $this->validarEmpresa($input);
     }
 
     /**
@@ -159,9 +210,20 @@ class Proposta extends CommonDBTM
             'pode_reabrir'  => $this->podeReabrir(),
             'pode_cancelar' => $this->podeCancelar(),
             'pode_duplicar' => !$this->isNewItem() && Session::haveRight(self::$rightname, CREATE),
+            'modelo'        => $this->getModelo(),
+            'cnpj_consulta' => (bool) (\Config::getConfigurationValue('plugin:propostas', 'cnpj_consulta_ativa') ?? false),
+            'cnpj_url'      => \Plugin::getWebDir('propostas') . '/ajax/cnpj.php',
         ]);
 
         return true;
+    }
+
+    public function getModelo(): ?Modelo
+    {
+        $modelo = new Modelo();
+
+        return (int) ($this->fields['plugin_propostas_modelos_id'] ?? 0) > 0
+            && $modelo->getFromDB((int) $this->fields['plugin_propostas_modelos_id']) ? $modelo : null;
     }
 
     /* ------------------------------------------------------------------
@@ -262,6 +324,11 @@ class Proposta extends CommonDBTM
             'is_recursive'       => $this->fields['is_recursive'],
             'name'               => sprintf(__('%s (cópia)', 'propostas'), $this->fields['name']),
             'solicitante'        => $this->fields['solicitante'],
+            'empresa_razao_social'        => $this->fields['empresa_razao_social'],
+            'empresa_nome_fantasia'       => $this->fields['empresa_nome_fantasia'],
+            'empresa_cnpj'                => $this->fields['empresa_cnpj'],
+            'plugin_propostas_modelos_id' => $this->fields['plugin_propostas_modelos_id'],
+            '_sem_copiar_modelo'          => true,
             'users_id_consultor' => Session::getLoginUserID() ?: $this->fields['users_id_consultor'],
             'tickets_id'         => 0,
             'data_emissao'       => date('Y-m-d'),
@@ -284,6 +351,14 @@ class Proposta extends CommonDBTM
                 'ordem'                 => $item['ordem'],
             ]);
         }
+        foreach (PropostaBloco::getBlocosDaProposta($this->getID()) as $bloco) {
+            (new PropostaBloco())->add([
+                PropostaBloco::$items_id => $id,
+                'name'                   => $bloco['name'],
+                'conteudo'               => $bloco['conteudo'],
+                'ordem'                  => $bloco['ordem'],
+            ]);
+        }
 
         Session::addMessageAfterRedirect(htmlescape(sprintf(
             __('Proposta duplicada a partir da nº %s. Confira os dados e os itens antes de gerar o link.', 'propostas'),
@@ -304,6 +379,10 @@ class Proposta extends CommonDBTM
         }
         if (PropostaItem::getItensDaProposta($this->getID()) === []) {
             Session::addMessageAfterRedirect(htmlescape(__('Inclua ao menos um item antes de gerar o link.', 'propostas')), false, ERROR);
+            return false;
+        }
+        if (trim((string) $this->fields['empresa_razao_social']) === '' || !Cnpj::validar((string) $this->fields['empresa_cnpj'])) {
+            Session::addMessageAfterRedirect(htmlescape(__('Informe a razão social e um CNPJ válido da empresa antes de gerar o link.', 'propostas')), false, ERROR);
             return false;
         }
 
@@ -481,9 +560,9 @@ class Proposta extends CommonDBTM
      * SHA-256 do que o cliente está aceitando: número, versão, título, datas, condições, itens e totais.
      * Gravado no aceite para provar depois que os valores não mudaram.
      */
-    public function calcularHashValores(): string
+    public function calcularHashValores(int $formato = Calculo::HASH_FORMATO_ATUAL, string $cargo = ''): string
     {
-        return Calculo::hashValores([
+        $cabecalho = [
             'numero'        => $this->getNumero(),
             'versao'        => (int) $this->fields['versao'],
             'titulo'        => (string) $this->fields['name'],
@@ -491,15 +570,34 @@ class Proposta extends CommonDBTM
             'validade_dias' => (int) $this->fields['validade_dias'],
             'aviso_previo'  => (int) $this->fields['aviso_previo_dias'],
             'condicoes'     => (string) $this->fields['condicoes'],
-        ], PropostaItem::getItensDaProposta($this->getID()));
+        ];
+        $itens = PropostaItem::getItensDaProposta($this->getID());
+
+        if ($formato === 1) {
+            return Calculo::hashValores($cabecalho, $itens);
+        }
+
+        return Calculo::hashValoresFormato2(
+            $cabecalho + [
+                'razao_social' => (string) $this->fields['empresa_razao_social'],
+                'cnpj'         => (string) $this->fields['empresa_cnpj'],
+            ],
+            $itens,
+            array_map(
+                static fn (array $b): array => ['titulo' => (string) $b['name'], 'conteudo' => (string) $b['conteudo']],
+                PropostaBloco::getBlocosDaProposta($this->getID())
+            ),
+            $cargo
+        );
     }
 
     /**
      * @return list<string> mensagens de erro (vazio = aceite registrado)
      */
-    public function aceitar(string $nome, string $cpf, bool $declaracao, string $ip, string $user_agent): array
+    public function aceitar(string $nome, string $cpf, string $cargo, bool $declaracao, string $ip, string $user_agent): array
     {
-        $nome = self::normalizarNome($nome);
+        $nome  = self::normalizarNome($nome);
+        $cargo = self::normalizarNome($cargo);
         $erros = [];
         if (!$this->podeResponder()) {
             $erros[] = 'Esta proposta não pode mais ser aceita.';
@@ -510,6 +608,9 @@ class Proposta extends CommonDBTM
         if (!Cpf::validar($cpf)) {
             $erros[] = 'CPF inválido.';
         }
+        if (mb_strlen($cargo) < 2) {
+            $erros[] = 'Informe o seu cargo na empresa.';
+        }
         if (!$declaracao) {
             $erros[] = 'Marque a declaração para confirmar o aceite.';
         }
@@ -518,7 +619,7 @@ class Proposta extends CommonDBTM
         }
 
         $digitos = Cpf::somenteDigitos($cpf);
-        $hash    = $this->calcularHashValores();
+        $hash    = $this->calcularHashValores(Calculo::HASH_FORMATO_ATUAL, $cargo);
         $id = Resposta::registrar([
             'plugin_propostas_propostas_id' => $this->getID(),
             'tipo'                          => Resposta::TIPO_ACEITE,
@@ -526,7 +627,9 @@ class Proposta extends CommonDBTM
             'nome'                          => $nome,
             'cpf_cifrado'                   => (new \GLPIKey())->encrypt($digitos),
             'cpf_mascarado'                 => Cpf::mascarar($digitos),
+            'cargo'                         => $cargo,
             'hash_valores'                  => $hash,
+            'hash_formato'                  => Calculo::HASH_FORMATO_ATUAL,
             'ip'                            => mb_substr($ip, 0, 45),
             'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
         ]);
@@ -539,10 +642,13 @@ class Proposta extends CommonDBTM
 
         $codigo = Calculo::codigo($hash);
         $this->adicionarAcompanhamento(sprintf(
-            '<p><strong>Proposta nº %s (versão %d) aceita pelo cliente.</strong></p><p>Nome: %s<br>CPF: %s<br>Código de verificação: %s</p>',
+            '<p><strong>Proposta nº %s (versão %d) aceita pelo cliente.</strong></p><p>Empresa: %s (CNPJ %s)<br>Nome: %s<br>Cargo: %s<br>CPF: %s<br>Código de verificação: %s</p>',
             htmlescape($this->getNumero()),
             (int) $this->fields['versao'],
+            htmlescape((string) $this->fields['empresa_razao_social']),
+            htmlescape((string) $this->fields['empresa_cnpj']),
             htmlescape($nome),
+            htmlescape($cargo),
             htmlescape(Cpf::mascarar($digitos)),
             htmlescape($codigo)
         ));
@@ -701,6 +807,7 @@ class Proposta extends CommonDBTM
                 $quando = new \DateTimeImmutable((string) $row['date_creation']);
                 $aceite = [
                     'nome'   => (string) $row['nome'],
+                    'cargo'  => (string) ($row['cargo'] ?? ''),
                     'data'   => $quando->format('d/m/Y') . ' às ' . $quando->format('H:i'),
                     'codigo' => Calculo::codigo($row['hash_valores']),
                 ];
@@ -713,6 +820,15 @@ class Proposta extends CommonDBTM
             'aceite'        => $aceite,
             'numero'        => $this->getNumero(),
             'titulo'        => (string) $this->fields['name'],
+            'empresa'       => [
+                'razao_social'  => (string) $this->fields['empresa_razao_social'],
+                'nome_fantasia' => (string) $this->fields['empresa_nome_fantasia'],
+                'cnpj'          => Cnpj::formatar((string) $this->fields['empresa_cnpj']),
+            ],
+            'blocos'        => array_map(
+                static fn (array $b): array => ['titulo' => (string) $b['name'], 'conteudo' => (string) $b['conteudo']],
+                PropostaBloco::getBlocosDaProposta($this->getID())
+            ),
             'versao'        => (int) $this->fields['versao'],
             'emissao'       => $emissao ? $emissao->format('d/m/Y') : '',
             'validade_dias' => (int) $this->fields['validade_dias'],
@@ -758,7 +874,7 @@ class Proposta extends CommonDBTM
     {
         global $DB;
 
-        $this->deleteChildrenAndRelationsFromDb([PropostaItem::class]);
+        $this->deleteChildrenAndRelationsFromDb([PropostaItem::class, PropostaBloco::class]);
         foreach ([Resposta::TABELA, Acesso::TABELA] as $tabela) {
             $DB->delete($tabela, ['plugin_propostas_propostas_id' => $this->getID()]);
         }
@@ -849,6 +965,19 @@ class Proposta extends CommonDBTM
             'field'    => 'validade_dias',
             'name'     => __('Validade (dias)', 'propostas'),
             'datatype' => 'integer',
+        ];
+
+        $tab[] = ['id' => 10, 'table' => self::getTable(), 'field' => 'empresa_razao_social', 'name' => __('Razão social', 'propostas'), 'datatype' => 'string'];
+        $tab[] = ['id' => 11, 'table' => self::getTable(), 'field' => 'empresa_cnpj', 'name' => __('CNPJ', 'propostas'), 'datatype' => 'string'];
+        $tab[] = ['id' => 12, 'table' => self::getTable(), 'field' => 'empresa_nome_fantasia', 'name' => __('Nome fantasia', 'propostas'), 'datatype' => 'string'];
+        $tab[] = [
+            'id'            => 13,
+            'table'         => Modelo::getTable(),
+            'field'         => 'name',
+            'linkfield'     => 'plugin_propostas_modelos_id',
+            'name'          => Modelo::getTypeName(1),
+            'datatype'      => 'dropdown',
+            'massiveaction' => false,
         ];
 
         $tab[] = [

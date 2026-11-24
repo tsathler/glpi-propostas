@@ -1,0 +1,29 @@
+{#
+ # Propostas - formulário do bloco de texto (o campo "Nome" é o título do bloco).
+ # @license GPL-3.0-or-later
+ #}
+{% extends 'generic_show_form.html.twig' %}
+{% import 'components/form/fields_macros.html.twig' as fields %}
+
+{% block more_fields %}
+   {{ fields.dropdownYesNo('is_active', item.fields['is_active'], __('Active')) }}
+
+   {{ fields.textareaField('conteudo', item.fields['conteudo'], __('Texto', 'propostas'), {
+      enable_richtext: true,
+      full_width: true
+   }) }}
+
+   {% if modelos is not empty %}
+      {% set lista %}
+         {% for m in modelos %}<a href="{{ path('/plugins/propostas/front/modelo.form.php') }}?id={{ m.id }}">{{ m.name }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+      {% endset %}
+      {{ fields.htmlField('', lista, __('Usado nos modelos', 'propostas')) }}
+   {% endif %}
+
+   <div class="col-12">
+      <div class="alert alert-info mb-0">
+         <i class="ti ti-info-circle"></i>
+         {{ __('Propostas já criadas guardam a própria cópia do texto. Mudanças aqui só valem para propostas novas.', 'propostas') }}
+      </div>
+   </div>
+{% endblock %}

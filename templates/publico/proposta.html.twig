@@ -10,14 +10,26 @@
 <header class="topo">
    <div class="wrap">
       <div class="rotulo">Proposta comercial · nº {{ p.numero }}</div>
-      <h1>{{ p.titulo }}</h1>
-      <div class="sub">Versão {{ p.versao }}</div>
+      {% if p.empresa.razao_social %}
+         <h1>{{ p.empresa.razao_social }}</h1>
+         <div class="sub">{{ p.titulo }} · versão {{ p.versao }}</div>
+         {% if p.empresa.nome_fantasia or p.empresa.cnpj %}
+            <div class="empresa">
+               {% if p.empresa.nome_fantasia %}{{ p.empresa.nome_fantasia }}{% endif %}
+               {% if p.empresa.nome_fantasia and p.empresa.cnpj %} · {% endif %}
+               {% if p.empresa.cnpj %}CNPJ {{ p.empresa.cnpj }}{% endif %}
+            </div>
+         {% endif %}
+      {% else %}
+         <h1>{{ p.titulo }}</h1>
+         <div class="sub">Versão {{ p.versao }}</div>
+      {% endif %}
 
       <div class="meta">
          <div><span class="k">Emissão</span><span class="v">{{ p.emissao }}</span></div>
          <div><span class="k">Validade</span><span class="v">{{ p.validade_dias }} dias (até {{ p.valida_ate }})</span></div>
          {% if p.solicitante %}
-            <div><span class="k">Solicitado por</span><span class="v">{{ p.solicitante }}</span></div>
+            <div><span class="k">Contato</span><span class="v">{{ p.solicitante }}</span></div>
          {% endif %}
          {% if p.consultor %}
             <div><span class="k">Consultor</span><span class="v">{{ p.consultor }}</span></div>
@@ -32,7 +44,7 @@
    {% endif %}
    {% if p.aceite %}
       <div class="faixa ok" role="status">
-         <strong>Proposta aceita</strong> em {{ p.aceite.data }} por {{ p.aceite.nome }}.
+         <strong>Proposta aceita</strong> em {{ p.aceite.data }} por {{ p.aceite.nome }}{% if p.aceite.cargo %} ({{ p.aceite.cargo }}){% endif %}.
          Código de verificação: <code>{{ p.aceite.codigo }}</code>
       </div>
    {% endif %}
@@ -53,6 +65,13 @@
          </div>
       {% endif %}
    </div>
+
+   {% for b in p.blocos %}
+      <section class="bloco">
+         <h2>{{ b.titulo }}</h2>
+         {% if b.conteudo %}<div class="card texto">{{ b.conteudo|safe_html }}</div>{% endif %}
+      </section>
+   {% endfor %}
 
    {% if p.recorrentes %}
       <section>
@@ -156,10 +175,15 @@
                   <input type="text" name="cpf" required maxlength="14" inputmode="numeric" autocomplete="off"
                          placeholder="000.000.000-00">
                </label>
+               <label>Cargo na empresa
+                  <input type="text" name="cargo" required maxlength="255" autocomplete="organization-title"
+                         value="{{ valores.cargo|default('') }}">
+               </label>
                <label class="check">
                   <input type="checkbox" name="declaracao" value="1" required>
-                  <span>Declaro que tenho poderes para contratar em nome da empresa e que li e concordo com as
-                     condições desta proposta.</span>
+                  <span>Declaro ter poderes para aceitar esta proposta em nome de
+                     <strong>{{ p.empresa.razao_social }}</strong>, CNPJ {{ p.empresa.cnpj }}, e que li e concordo
+                     com as condições desta proposta.</span>
                </label>
                <button type="submit" class="botao primario">Confirmar aceite</button>
             </form>

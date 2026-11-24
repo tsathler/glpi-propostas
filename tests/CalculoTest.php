@@ -128,6 +128,78 @@ final class CalculoTest extends TestCase
         self::assertNotSame(self::HASH_EXEMPLO, Calculo::hashValores($cabecalho, $itens));
     }
 
+    /** Hash do exemplo no formato 2. Mesma regra do HASH_EXEMPLO: só mude de propósito. */
+    private const HASH_EXEMPLO_FORMATO2 = 'b7218b34cae6cce2632b7c54ddaae3024f6c9eca23c528094c123cd6d4f94f8e';
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function cabecalhoFormato2(): array
+    {
+        return self::cabecalho() + ['razao_social' => 'Empresa Exemplo Ltda', 'cnpj' => '12.ABC.345/01DE-35'];
+    }
+
+    /**
+     * @return list<array{titulo: string, conteudo: string}>
+     */
+    private static function blocos(): array
+    {
+        return [['titulo' => 'Sobre o programa', 'conteudo' => '<p>Texto de exemplo.</p>']];
+    }
+
+    public function testFormato2DoExemploNaoMudou(): void
+    {
+        self::assertSame(
+            self::HASH_EXEMPLO_FORMATO2,
+            Calculo::hashValoresFormato2(self::cabecalhoFormato2(), self::itens(), self::blocos(), 'Diretora')
+        );
+    }
+
+    public function testFormato2EDiferenteDoFormato1(): void
+    {
+        self::assertNotSame(self::HASH_EXEMPLO, self::HASH_EXEMPLO_FORMATO2);
+        self::assertSame(2, Calculo::HASH_FORMATO_ATUAL);
+    }
+
+    public function testFormato2IgnoraPontuacaoDoCnpj(): void
+    {
+        $cabecalho = self::cabecalhoFormato2();
+        $cabecalho['cnpj'] = '12abc34501de35';
+
+        self::assertSame(
+            self::HASH_EXEMPLO_FORMATO2,
+            Calculo::hashValoresFormato2($cabecalho, self::itens(), self::blocos(), 'Diretora')
+        );
+    }
+
+    /**
+     * @return iterable<string, array{callable(array, array, string): array{0: array, 1: array, 2: string}}>
+     */
+    public static function alteracoesFormato2(): iterable
+    {
+        yield 'CNPJ' => [static function (array $c, array $b, string $cargo): array { $c['cnpj'] = '11.222.333/0001-81'; return [$c, $b, $cargo]; }];
+        yield 'razão social' => [static function (array $c, array $b, string $cargo): array { $c['razao_social'] .= ' ME'; return [$c, $b, $cargo]; }];
+        yield 'cargo' => [static fn (array $c, array $b, string $cargo): array => [$c, $b, 'Gerente']];
+        yield 'texto do bloco' => [static function (array $c, array $b, string $cargo): array { $b[0]['conteudo'] = '<p>Outro texto.</p>'; return [$c, $b, $cargo]; }];
+        yield 'título do bloco' => [static function (array $c, array $b, string $cargo): array { $b[0]['titulo'] = 'Outro título'; return [$c, $b, $cargo]; }];
+        yield 'bloco a mais' => [static function (array $c, array $b, string $cargo): array { $b[] = ['titulo' => 'Fechamento', 'conteudo' => '']; return [$c, $b, $cargo]; }];
+        yield 'sem blocos' => [static fn (array $c, array $b, string $cargo): array => [$c, [], $cargo]];
+        yield 'preço (como no formato 1)' => [static fn (array $c, array $b, string $cargo): array => [$c + ['_preco' => true], $b, $cargo]];
+    }
+
+    #[DataProvider('alteracoesFormato2')]
+    public function testFormato2MudaQuandoAlgoAceitoMuda(callable $alterar): void
+    {
+        [$cabecalho, $blocos, $cargo] = $alterar(self::cabecalhoFormato2(), self::blocos(), 'Diretora');
+        $itens = self::itens();
+        if (isset($cabecalho['_preco'])) {
+            unset($cabecalho['_preco']);
+            $itens[0]['valor_unitario'] = '149.9100';
+        }
+
+        self::assertNotSame(self::HASH_EXEMPLO_FORMATO2, Calculo::hashValoresFormato2($cabecalho, $itens, $blocos, $cargo));
+    }
+
     public function testCodigo(): void
     {
         self::assertSame('63D4-6BC1-D754-06EE', Calculo::codigo(self::HASH_EXEMPLO));

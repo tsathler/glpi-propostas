@@ -3,6 +3,9 @@
  # @license GPL-3.0-or-later
  #}
 <div class="card">
+   {% if aviso|default(false) %}
+      <div class="alert alert-info m-3 mb-0"><i class="ti ti-info-circle"></i> {{ aviso }}</div>
+   {% endif %}
    {% if travada %}
       <div class="alert alert-info m-3 mb-0">
          <i class="ti ti-lock"></i>
@@ -12,7 +15,7 @@
    {% if canedit %}
       <form method="post" action="{{ form_url }}" class="card-body border-bottom">
          <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
-         <input type="hidden" name="{{ items_id }}" value="{{ proposta.getID() }}">
+         <input type="hidden" name="{{ items_id }}" value="{{ pai.getID() }}">
          <div class="row g-2 align-items-end">
             <div class="col-md-2">
                <label class="form-label" for="prop_tipo">{{ __('Tipo', 'propostas') }}</label>

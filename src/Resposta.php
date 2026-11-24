@@ -108,12 +108,24 @@ class Resposta extends CommonGLPI
             if ($ver_cpf && !empty($row['cpf_cifrado'])) {
                 $cpf = Cpf::formatar((new GLPIKey())->decrypt($row['cpf_cifrado']) ?? '') ?: $cpf;
             }
+            $aceite = $row['tipo'] === self::TIPO_ACEITE;
+            // Confere no formato em que o aceite foi gravado (1 = sem empresa/blocos/cargo).
+            $confere = null;
+            if ($aceite && (int) $row['versao'] === (int) $item->fields['versao']) {
+                $formato = (int) ($row['hash_formato'] ?? 1);
+                $confere = hash_equals(
+                    (string) $row['hash_valores'],
+                    $item->calcularHashValores($formato, (string) ($row['cargo'] ?? ''))
+                );
+            }
             $linhas[] = [
-                'tipo'     => $row['tipo'] === self::TIPO_ACEITE ? __('Aceite', 'propostas') : __('Dúvida', 'propostas'),
-                'aceite'   => $row['tipo'] === self::TIPO_ACEITE,
+                'tipo'     => $aceite ? __('Aceite', 'propostas') : __('Dúvida', 'propostas'),
+                'aceite'   => $aceite,
+                'confere'  => $confere,
                 'versao'   => $row['versao'],
                 'data'     => $row['date_creation'],
                 'nome'     => $row['nome'],
+                'cargo'    => $row['cargo'] ?? '',
                 'cpf'      => $cpf,
                 'mensagem' => $row['mensagem'],
                 'codigo'   => Calculo::codigo($row['hash_valores']),
@@ -124,9 +136,7 @@ class Resposta extends CommonGLPI
         }
 
         TemplateRenderer::getInstance()->display('@propostas/respostas.html.twig', [
-            'linhas'      => $linhas,
-            'hash_atual'  => $item->calcularHashValores(),
-            'versao_atual'=> (int) $item->fields['versao'],
+            'linhas' => $linhas,
         ]);
 
         return true;

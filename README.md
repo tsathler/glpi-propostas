@@ -18,18 +18,21 @@ sudo -u www-data php bin/console plugin:activate propostas
 sudo -u www-data php bin/console cache:clear
 ```
 
-- **Acesso:** os perfis que podem alterar a Configuração recebem acesso total na instalação. Os outros perfis são liberados em **Administração > Perfis**.
-- **Menu:** saia e entre de novo no GLPI para o menu aparecer em **Ferramentas > Propostas**.
+- **Acesso:** os perfis que podem alterar a Configuração recebem acesso total na instalação. Os outros perfis são liberados em **Administração > Perfis > Propostas**, com dois direitos: *Propostas* e *Gerenciar modelos e blocos de texto*.
+- **Menu:** saia e entre de novo no GLPI (ou troque de perfil) para os menus aparecerem em **Ferramentas**.
 - **Atualizar:** troque a pasta e rode os mesmos comandos, com `plugin:install propostas --force`. O `cache:clear` faz o GLPI carregar as rotas novas.
 
 ## Funcionalidades
 
 - **Propostas:** menu **Ferramentas > Propostas**, com lista e busca.
-- **Cadastro:** título, solicitante, consultor, chamado vinculado, emissão, validade, aviso prévio e condições comerciais.
+- **Cadastro:** título, empresa cliente (CNPJ, razão social e nome fantasia), contato na empresa, consultor, chamado vinculado, emissão, validade, aviso prévio e condições comerciais.
+- **Modelos de proposta:** menu **Ferramentas > Modelos de proposta**. O modelo guarda validade, aviso prévio, condições, itens (com valores de exemplo) e os blocos de texto que usa. Na criação da proposta, tudo isso é **copiado** para ela; depois a proposta é independente e o modelo não pode ser trocado.
+- **Blocos de texto:** menu **Ferramentas > Blocos de texto**, uma biblioteca de textos formatados (título e texto). Cada modelo escolhe quais blocos usa e em que ordem. Na proposta, a aba **Blocos de texto** permite editar, incluir da biblioteca e remover enquanto ela é rascunho.
+- **Busca de CNPJ:** o botão **Buscar CNPJ** preenche razão social e nome fantasia. A consulta sai do servidor do GLPI (com o proxy do GLPI, se houver), envia só o CNPJ e espera no máximo 5 segundos. Provedor padrão: BrasilAPI; a URL e o liga/desliga ficam em **Configuração > Plug-ins > Propostas**. Aceita CNPJ numérico e alfanumérico.
 - **Itens:** aba **Itens** com linhas recorrentes (mensais) ou pontuais (pagamento único), cada uma com quantidade, valor unitário, desconto, subtotal e totais.
-- **Link para o cliente:** gerar, copiar, reabrir como nova versão ou cancelar. A página pública não pede login e não usa CSS nem JavaScript do GLPI.
+- **Link para o cliente:** gerar (exige razão social e CNPJ válido), copiar, reabrir como nova versão ou cancelar. A página pública não pede login e não usa CSS nem JavaScript do GLPI; mostra a empresa na capa e os blocos de texto antes dos itens.
 - **Trava de edição:** a proposta enviada fica travada. Para mudar valores, é preciso reabrir, o que cria uma nova versão e invalida o link anterior.
-- **Resposta do cliente:** o cliente **aceita** (nome, CPF e declaração) ou envia **dúvidas**. O aceite grava um código de verificação dos valores aceitos. Aceite e dúvida viram acompanhamento privado no chamado vinculado.
+- **Resposta do cliente:** o cliente **aceita** em nome da empresa (nome, CPF, cargo e declaração) ou envia **dúvidas**. O aceite grava um código de verificação dos valores aceitos. Aceite e dúvida viram acompanhamento privado no chamado vinculado.
 - **Abas da proposta:** **Respostas do cliente** e **Acessos ao link**.
 - **Notificações ao consultor:** proposta aberta, aceita e com dúvida. Exigem as notificações por e-mail ativas no GLPI.
 - **Duplicar:** cria um rascunho novo a partir de uma proposta.
@@ -41,7 +44,7 @@ sudo -u www-data php bin/console cache:clear
 - **Validade:** o link vale até as 23:59:59 do último dia de validade. Link vencido responde 410; token inexistente ou revogado responde 404.
 - **Proteção dos envios:** o GLPI confere o token anti-falsificação (CSRF). O limite é de 10 envios por IP por hora, e o banco guarda só o hash do IP.
 - **CPF:** guardado cifrado, mais uma versão mascarada (`***.456.789-**`). O CPF completo só aparece para quem pode editar a proposta.
-- **Código de verificação:** é o SHA-256 de número, versão, título, datas, condições, itens e totais. A aba Respostas mostra se o aceite ainda confere com os valores atuais.
+- **Código de verificação:** é o SHA-256 de número, versão, título, datas, condições, itens e totais e, desde a versão 1.1.0 (formato 2), também da empresa (razão social e CNPJ), dos blocos de texto e do cargo de quem aceitou. Cada aceite guarda o formato em que foi calculado, e a aba Respostas confere cada um no próprio formato.
 - **Cabeçalhos:** a página envia `X-Robots-Tag: noindex`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer` e `X-Frame-Options: DENY`.
 
 ## Expor só o link público

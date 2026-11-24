@@ -1,0 +1,25 @@
+{#
+ # Propostas - formulário do modelo de proposta.
+ # @license GPL-3.0-or-later
+ #}
+{% extends 'generic_show_form.html.twig' %}
+{% import 'components/form/fields_macros.html.twig' as fields %}
+
+{% block more_fields %}
+   {{ fields.dropdownYesNo('is_active', item.fields['is_active'], __('Active')) }}
+   {{ fields.numberField('ordem', item.fields['ordem'], __('Ordem na lista', 'propostas'), {min: 0}) }}
+   {{ fields.numberField('validade_dias', item.fields['validade_dias'], __('Validade padrão (dias)', 'propostas'), {min: 1}) }}
+   {{ fields.numberField('aviso_previo_dias', item.fields['aviso_previo_dias'], __('Aviso prévio padrão (dias)', 'propostas'), {min: 0}) }}
+
+   {{ fields.textareaField('condicoes', item.fields['condicoes'], __('Condições comerciais', 'propostas'), {
+      enable_richtext: true,
+      full_width: true
+   }) }}
+
+   <div class="col-12">
+      <div class="alert alert-info mb-0">
+         <i class="ti ti-info-circle"></i>
+         {{ __('Na criação da proposta, validade, aviso prévio, condições, itens e blocos de texto deste modelo são copiados para ela. Mudar o modelo depois só vale para propostas novas.', 'propostas') }}
+      </div>
+   </div>
+{% endblock %}

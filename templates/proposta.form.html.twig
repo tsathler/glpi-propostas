@@ -13,7 +13,78 @@
       {{ fields.htmlField('', '<span class="badge bg-blue-lt">' ~ status_label|e ~ '</span>', __('Status')) }}
    {% endif %}
 
-   {{ fields.textField('solicitante', item.fields['solicitante'], __('Solicitado por', 'propostas'), travado) }}
+   {# Modelo: escolhido só na criação; depois fica só a informação de origem. #}
+   {% if item.isNewItem() %}
+      {{ fields.dropdownField('GlpiPlugin\\Propostas\\Modelo', 'plugin_propostas_modelos_id', 0, __('Modelo de proposta', 'propostas'), {
+         condition: {'is_active': 1},
+         entity: item.fields['entities_id'],
+         helper: __('Validade, aviso prévio, condições, itens e blocos de texto do modelo são copiados para a proposta. O modelo não pode ser trocado depois.', 'propostas')
+      }) }}
+   {% elseif modelo %}
+      {{ fields.htmlField('', '<a href="' ~ modelo.getLinkURL() ~ '">' ~ modelo.fields['name']|e ~ '</a>', __('Modelo de origem', 'propostas')) }}
+   {% endif %}
+
+   {# Empresa cliente: obrigatória (razão social e CNPJ) só para gerar o link. #}
+   <div class="col-12 mt-2"><h4 class="mb-0"><i class="ti ti-building"></i> {{ __('Empresa cliente', 'propostas') }}</h4></div>
+
+   {% set campo_cnpj %}
+      <div class="input-group">
+         <input type="text" class="form-control" name="empresa_cnpj" id="propostas-cnpj" maxlength="18"
+                value="{{ item.fields['empresa_cnpj'] }}" placeholder="00.000.000/0000-00" {{ editavel ? '' : 'disabled' }}>
+         {% if cnpj_consulta and editavel %}
+            <button type="button" class="btn btn-outline-secondary" id="propostas-buscar-cnpj">
+               <i class="ti ti-search"></i> {{ __('Buscar CNPJ', 'propostas') }}
+            </button>
+         {% endif %}
+      </div>
+      <div class="form-text" id="propostas-cnpj-msg"></div>
+   {% endset %}
+   {{ fields.htmlField('', campo_cnpj, __('CNPJ', 'propostas')) }}
+
+   {{ fields.textField('empresa_razao_social', item.fields['empresa_razao_social'], __('Razão social', 'propostas'), travado|merge({id: 'propostas-razao'})) }}
+   {{ fields.textField('empresa_nome_fantasia', item.fields['empresa_nome_fantasia'], __('Nome fantasia', 'propostas'), travado|merge({id: 'propostas-fantasia'})) }}
+   {{ fields.textField('solicitante', item.fields['solicitante'], __('Contato na empresa', 'propostas'), travado) }}
+
+   {% if cnpj_consulta and editavel %}
+      <script>
+         (function () {
+            const botao = document.getElementById('propostas-buscar-cnpj');
+            if (!botao) { return; }
+            botao.addEventListener('click', async function () {
+               const msg = document.getElementById('propostas-cnpj-msg');
+               const cnpj = document.getElementById('propostas-cnpj').value;
+               msg.className = 'form-text';
+               msg.textContent = '{{ __('Consultando…', 'propostas')|e('js') }}';
+               botao.disabled = true;
+               try {
+                  const r = await fetch('{{ cnpj_url }}?' + new URLSearchParams({cnpj: cnpj}), {
+                     headers: {'X-Requested-With': 'XMLHttpRequest'}
+                  });
+                  const d = await r.json();
+                  if (!d.ok) {
+                     msg.className = 'form-text text-danger';
+                     msg.textContent = d.erro;
+                     return;
+                  }
+                  document.getElementById('propostas-cnpj').value = d.cnpj;
+                  if (d.razao_social) { document.querySelector('[name=empresa_razao_social]').value = d.razao_social; }
+                  if (d.nome_fantasia) { document.querySelector('[name=empresa_nome_fantasia]').value = d.nome_fantasia; }
+                  msg.className = d.ativa ? 'form-text text-success' : 'form-text text-warning';
+                  msg.textContent = d.ativa
+                     ? '{{ __('Dados preenchidos. Confira e salve.', 'propostas')|e('js') }}'
+                     : '{{ __('Atenção: situação cadastral', 'propostas')|e('js') }} ' + (d.situacao || '?') + '. {{ __('Confira e salve.', 'propostas')|e('js') }}';
+               } catch (e) {
+                  msg.className = 'form-text text-danger';
+                  msg.textContent = '{{ __('Não foi possível consultar agora. Digite os dados à mão.', 'propostas')|e('js') }}';
+               } finally {
+                  botao.disabled = false;
+               }
+            });
+         })();
+      </script>
+   {% endif %}
+
+   <div class="col-12 mt-2"><h4 class="mb-0"><i class="ti ti-file-dollar"></i> {{ __('Proposta', 'propostas') }}</h4></div>
 
    {{ fields.dropdownField('User', 'users_id_consultor', item.fields['users_id_consultor'], __('Consultor', 'propostas'), travado|merge({
       right: 'all',

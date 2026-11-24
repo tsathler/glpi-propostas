@@ -5,6 +5,28 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-24
+
+### Added
+
+- **Modelos de proposta** (Ferramentas > Modelos de proposta): validade, aviso prévio, condições, itens com valores de exemplo e blocos de texto, copiados para a proposta na criação. O modelo de origem fica registrado e não pode ser trocado.
+- **Blocos de texto** (Ferramentas > Blocos de texto): biblioteca de textos formatados; cada modelo escolhe quais usa e em que ordem. A proposta guarda a própria cópia (aba Blocos de texto, editável enquanto rascunho) e a página pública os mostra antes dos itens.
+- **Empresa cliente** na proposta: CNPJ (numérico ou alfanumérico, com dígitos conferidos), razão social e nome fantasia. Razão social e CNPJ válido são obrigatórios para gerar o link.
+- **Buscar CNPJ**: consulta pelo servidor do GLPI (proxy do GLPI, 5 s), BrasilAPI por padrão, URL e liga/desliga configuráveis; avisa quando a situação cadastral não é ATIVA.
+- **Cargo** no aceite e declaração em nome da empresa (razão social e CNPJ).
+- Aba **Propostas** em Administração > Perfis, com os direitos *Propostas* e o novo *Gerenciar modelos e blocos de texto*.
+- Testes de CNPJ e do hash formato 2.
+
+### Changed
+
+- Código de verificação no **formato 2**: inclui empresa, blocos de texto e cargo. Aceites anteriores continuam conferidos no formato 1 (coluna `hash_formato`).
+- "Solicitado por" passa a ser "Contato na empresa".
+- Validação de itens compartilhada entre itens de proposta e de modelo.
+
+### Fixed
+
+- O README dizia que os outros perfis eram liberados em Administração > Perfis, mas faltava a aba de direitos do plugin.
+
 ## [1.0.0] - 2026-11-24
 
 Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abaixo), que não tiveram release própria.
@@ -67,5 +89,6 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/tsathler/glpi-propostas/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/tsathler/glpi-propostas/releases/tag/v1.0.0
