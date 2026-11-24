@@ -60,6 +60,8 @@ class Proposta extends CommonDBTM
         $tabs = [];
         $this->addDefaultFormTab($tabs);
         $this->addStandardTab(PropostaItem::class, $tabs, $options);
+        $this->addStandardTab(Resposta::class, $tabs, $options);
+        $this->addStandardTab(Acesso::class, $tabs, $options);
         $this->addStandardTab(Log::class, $tabs, $options);
 
         return $tabs;
@@ -335,12 +337,18 @@ class Proposta extends CommonDBTM
     }
 
     /**
-     * Primeira abertura pelo cliente: Enviada -> Visualizada.
-     * Quem está logado no GLPI (consultor conferindo o link) não conta.
+     * Abertura do link. Quem está logado no GLPI (consultor conferindo o link) não conta.
+     * Registra o acesso e, na primeira abertura, muda Enviada -> Visualizada e avisa o consultor.
      */
-    public function registrarVisualizacao(): void
+    public function registrarVisualizacao(string $ip, string $user_agent): void
     {
-        if ($this->fields['status'] !== self::STATUS_ENVIADA || Session::getLoginUserID() !== false) {
+        if (Session::getLoginUserID() !== false) {
+            return;
+        }
+
+        Acesso::registrar($this->getID(), (int) $this->fields['versao'], $ip, $user_agent);
+
+        if ($this->fields['status'] !== self::STATUS_ENVIADA) {
             return;
         }
         $this->update([
@@ -348,6 +356,223 @@ class Proposta extends CommonDBTM
             '_acao_interna' => true,
             'status'        => self::STATUS_VISUALIZADA,
         ]);
+        $this->notificar('aberta');
+    }
+
+    /* ------------------------------------------------------------------
+     * Respostas do cliente (aceite e dúvida)
+     * ------------------------------------------------------------------ */
+
+    /**
+     * O cliente pode aceitar ou mandar dúvida enquanto a proposta está enviada e dentro da validade.
+     */
+    public function podeResponder(): bool
+    {
+        return in_array($this->fields['status'], [
+            self::STATUS_ENVIADA,
+            self::STATUS_VISUALIZADA,
+            self::STATUS_DUVIDA,
+        ], true) && !$this->isLinkExpirado();
+    }
+
+    /**
+     * SHA-256 do que o cliente está aceitando: número, versão, título, datas, condições, itens e totais.
+     * Gravado no aceite para provar depois que os valores não mudaram.
+     */
+    public function calcularHashValores(): string
+    {
+        $dec = static fn ($v, int $casas): string => number_format((float) $v, $casas, '.', '');
+
+        $itens = [];
+        foreach (PropostaItem::getItensDaProposta($this->getID()) as $item) {
+            $itens[] = [
+                'tipo'           => (string) $item['tipo'],
+                'nome'           => (string) $item['name'],
+                'quantidade'     => $dec($item['quantidade'], 2),
+                'valor_unitario' => $dec($item['valor_unitario'], 4),
+                'desconto_pct'   => $dec($item['desconto_pct'], 2),
+                'subtotal'       => $dec(PropostaItem::calcularSubtotal($item), 2),
+            ];
+        }
+        $totais = $this->getTotais();
+
+        $conteudo = [
+            'numero'        => $this->getNumero(),
+            'versao'        => (int) $this->fields['versao'],
+            'titulo'        => (string) $this->fields['name'],
+            'emissao'       => (string) $this->fields['data_emissao'],
+            'validade_dias' => (int) $this->fields['validade_dias'],
+            'aviso_previo'  => (int) $this->fields['aviso_previo_dias'],
+            'condicoes'     => (string) $this->fields['condicoes'],
+            'itens'         => $itens,
+            'total_mensal'  => $dec($totais[PropostaItem::TIPO_RECORRENTE], 2),
+            'total_unico'   => $dec($totais[PropostaItem::TIPO_PONTUAL], 2),
+        ];
+
+        return hash('sha256', json_encode($conteudo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @return list<string> mensagens de erro (vazio = aceite registrado)
+     */
+    public function aceitar(string $nome, string $cpf, bool $declaracao, string $ip, string $user_agent): array
+    {
+        $nome = self::normalizarNome($nome);
+        $erros = [];
+        if (!$this->podeResponder()) {
+            $erros[] = 'Esta proposta não pode mais ser aceita.';
+        }
+        if (!self::isNomeCompleto($nome)) {
+            $erros[] = 'Informe o nome completo.';
+        }
+        if (!Resposta::validarCpf($cpf)) {
+            $erros[] = 'CPF inválido.';
+        }
+        if (!$declaracao) {
+            $erros[] = 'Marque a declaração para confirmar o aceite.';
+        }
+        if ($erros !== []) {
+            return $erros;
+        }
+
+        $digitos = Resposta::somenteDigitos($cpf);
+        $hash    = $this->calcularHashValores();
+        $id = Resposta::registrar([
+            'plugin_propostas_propostas_id' => $this->getID(),
+            'tipo'                          => Resposta::TIPO_ACEITE,
+            'versao'                        => (int) $this->fields['versao'],
+            'nome'                          => $nome,
+            'cpf_cifrado'                   => (new \GLPIKey())->encrypt($digitos),
+            'cpf_mascarado'                 => Resposta::mascararCpf($digitos),
+            'hash_valores'                  => $hash,
+            'ip'                            => mb_substr($ip, 0, 45),
+            'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
+        ]);
+
+        $this->update([
+            'id'            => $this->getID(),
+            '_acao_interna' => true,
+            'status'        => self::STATUS_ACEITA,
+        ]);
+
+        $codigo = Resposta::formatarCodigo($hash);
+        $this->adicionarAcompanhamento(sprintf(
+            '<p><strong>Proposta nº %s (versão %d) aceita pelo cliente.</strong></p><p>Nome: %s<br>CPF: %s<br>Código de verificação: %s</p>',
+            htmlescape($this->getNumero()),
+            (int) $this->fields['versao'],
+            htmlescape($nome),
+            htmlescape(Resposta::mascararCpf($digitos)),
+            htmlescape($codigo)
+        ));
+        $this->notificar('aceita', ['resposta_id' => $id, 'nome' => $nome, 'codigo' => $codigo, 'mensagem' => '']);
+
+        return [];
+    }
+
+    /**
+     * @return list<string> mensagens de erro (vazio = dúvida registrada)
+     */
+    public function registrarDuvida(string $nome, string $mensagem, string $ip, string $user_agent): array
+    {
+        $nome     = self::normalizarNome($nome);
+        // Troca bytes que não são UTF-8 válido: senão o MySQL recusa o INSERT e a página dá erro 500.
+        $mensagem = trim(str_replace("\r\n", "\n", mb_scrub($mensagem, 'UTF-8')));
+        $erros = [];
+        if (!$this->podeResponder()) {
+            $erros[] = 'Esta proposta não aceita mais dúvidas por aqui. Fale com o seu consultor.';
+        }
+        if (mb_strlen($nome) < 3) {
+            $erros[] = 'Informe o seu nome.';
+        }
+        if (mb_strlen($mensagem) < 5) {
+            $erros[] = 'Escreva a sua dúvida.';
+        } elseif (mb_strlen($mensagem) > 3000) {
+            $erros[] = 'A dúvida pode ter até 3.000 caracteres.';
+        }
+        if ($erros !== []) {
+            return $erros;
+        }
+
+        $id = Resposta::registrar([
+            'plugin_propostas_propostas_id' => $this->getID(),
+            'tipo'                          => Resposta::TIPO_DUVIDA,
+            'versao'                        => (int) $this->fields['versao'],
+            'nome'                          => $nome,
+            'mensagem'                      => $mensagem,
+            'ip'                            => mb_substr($ip, 0, 45),
+            'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
+        ]);
+
+        $this->update([
+            'id'            => $this->getID(),
+            '_acao_interna' => true,
+            'status'        => self::STATUS_DUVIDA,
+        ]);
+
+        $this->adicionarAcompanhamento(sprintf(
+            '<p><strong>Dúvida do cliente sobre a proposta nº %s (versão %d).</strong></p><p>De: %s</p><p>%s</p>',
+            htmlescape($this->getNumero()),
+            (int) $this->fields['versao'],
+            htmlescape($nome),
+            nl2br(htmlescape($mensagem))
+        ));
+        $this->notificar('duvida', ['resposta_id' => $id, 'nome' => $nome, 'codigo' => '', 'mensagem' => $mensagem]);
+
+        return [];
+    }
+
+    /**
+     * Acompanhamento privado no chamado vinculado, se houver. Sem notificação do chamado:
+     * o consultor já recebe a do plugin.
+     */
+    private function adicionarAcompanhamento(string $html): void
+    {
+        $tickets_id = (int) $this->fields['tickets_id'];
+        if ($tickets_id <= 0) {
+            return;
+        }
+
+        try {
+            (new \ITILFollowup())->add([
+                'itemtype'      => \Ticket::class,
+                'items_id'      => $tickets_id,
+                'content'       => $html,
+                'is_private'    => 1,
+                '_disablenotif' => true,
+            ]);
+        } catch (\Throwable $e) {
+            \Toolbox::logInFile('propostas', sprintf("Acompanhamento no chamado %d falhou: %s\n", $tickets_id, $e->getMessage()));
+        }
+    }
+
+    /**
+     * Dispara a notificação sem nunca quebrar a resposta do cliente.
+     *
+     * @param array<string, mixed> $resposta
+     */
+    private function notificar(string $evento, array $resposta = []): void
+    {
+        try {
+            \NotificationEvent::raiseEvent($evento, $this, ['resposta' => $resposta]);
+        } catch (\Throwable $e) {
+            \Toolbox::logInFile('propostas', sprintf("Notificação '%s' da proposta %d falhou: %s\n", $evento, $this->getID(), $e->getMessage()));
+        }
+    }
+
+    private static function normalizarNome(string $nome): string
+    {
+        // mb_scrub antes do preg_replace com /u, que devolve null para UTF-8 inválido.
+        return mb_substr(trim(preg_replace('/\s+/u', ' ', mb_scrub($nome, 'UTF-8')) ?? ''), 0, 255);
+    }
+
+    /**
+     * Nome e sobrenome, cada um com ao menos 2 letras.
+     */
+    private static function isNomeCompleto(string $nome): bool
+    {
+        $partes = array_filter(explode(' ', $nome), static fn (string $p): bool => mb_strlen($p) >= 2);
+
+        return count($partes) >= 2;
     }
 
     /**
@@ -387,7 +612,23 @@ class Proposta extends CommonDBTM
 
         $emissao = \DateTimeImmutable::createFromFormat('!Y-m-d', (string) $this->fields['data_emissao']);
 
+        $aceite = null;
+        if ($this->fields['status'] === self::STATUS_ACEITA) {
+            $row = Resposta::getAceite($this->getID(), (int) $this->fields['versao']);
+            if ($row !== null) {
+                $quando = new \DateTimeImmutable((string) $row['date_creation']);
+                $aceite = [
+                    'nome'   => (string) $row['nome'],
+                    'data'   => $quando->format('d/m/Y') . ' às ' . $quando->format('H:i'),
+                    'codigo' => Resposta::formatarCodigo($row['hash_valores']),
+                ];
+            }
+        }
+
         return [
+            'status'        => (string) $this->fields['status'],
+            'pode_responder'=> $this->podeResponder(),
+            'aceite'        => $aceite,
             'numero'        => $this->getNumero(),
             'titulo'        => (string) $this->fields['name'],
             'versao'        => (int) $this->fields['versao'],
@@ -438,7 +679,12 @@ class Proposta extends CommonDBTM
 
     public function cleanDBonPurge(): void
     {
+        global $DB;
+
         $this->deleteChildrenAndRelationsFromDb([PropostaItem::class]);
+        foreach ([Resposta::TABELA, Acesso::TABELA] as $tabela) {
+            $DB->delete($tabela, ['plugin_propostas_propostas_id' => $this->getID()]);
+        }
     }
 
     public function rawSearchOptions(): array

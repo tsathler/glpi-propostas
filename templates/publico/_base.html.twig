@@ -60,6 +60,29 @@
       .fixos .v { font-weight: 600; }
       .acoes { display: flex; justify-content: flex-end; padding: 16px 0 0; }
       .botao { appearance: none; border: 1px solid var(--borda); background: #fff; color: var(--texto); border-radius: 10px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+      .faixa { border-radius: 12px; padding: 14px 18px; margin: 16px 0; font-size: 14px; }
+      .faixa.ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+      .faixa.erro { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+      .faixa code { font-weight: 700; letter-spacing: .04em; }
+      main > .faixa:first-child { position: relative; z-index: 1; margin-top: -72px; margin-bottom: 88px; }
+      .decisao { background: var(--escuro); color: #fff; border-radius: 16px; padding: 28px; text-align: center; }
+      .decisao h2 { margin-top: 0; }
+      .decisao > p { color: #cbd5e1; margin-top: 0; }
+      .decisao .faixa { text-align: left; }
+      .painel { display: inline-block; vertical-align: top; margin: 6px; text-align: left; }
+      .painel[open] { display: block; margin: 16px 0 0; }
+      .painel summary { list-style: none; display: inline-block; }
+      .painel summary::-webkit-details-marker { display: none; }
+      .botao.primario { background: var(--destaque); border-color: var(--destaque); color: #fff; }
+      .formulario { background: #fff; color: var(--texto); border-radius: 12px; padding: 20px; margin-top: 12px; display: grid; gap: 14px; }
+      .formulario label { display: grid; gap: 6px; font-weight: 600; font-size: 14px; }
+      .formulario input[type=text], .formulario textarea {
+         font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid var(--borda); border-radius: 10px; width: 100%;
+      }
+      .formulario .check { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; }
+      .formulario .check input { margin-top: 4px; }
+      .formulario .nota { margin: 0; color: var(--suave); font-size: 13px; }
+      .formulario button { justify-self: start; }
       .rodape { margin: 48px 0 0; padding: 22px 0; background: var(--escuro); color: #9ca3af; font-size: 13px; }
       .aviso { text-align: center; padding: 96px 16px; }
       .aviso h1 { font-size: 26px; margin-bottom: 8px; }
@@ -75,7 +98,7 @@
          .topo { padding: 24px 0 72px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
          .card { box-shadow: none; border: 1px solid var(--borda); }
          .card.forte, .chip, .barra, .ponto { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-         .acoes, .rodape { display: none; }
+         .acoes, .rodape, .decisao { display: none; }
          section { break-inside: avoid; }
       }
    </style>

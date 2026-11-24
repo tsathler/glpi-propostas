@@ -1,0 +1,37 @@
+{#
+ # Propostas - aba "Acessos ao link".
+ # @license GPL-3.0-or-later
+ #}
+<div class="card">
+   {% if linhas is empty %}
+      <div class="card-body text-muted">
+         {{ __('Ninguém abriu o link ainda. Aberturas por quem está logado no GLPI não contam.', 'propostas') }}
+      </div>
+   {% else %}
+      <div class="table-responsive">
+         <table class="table table-hover card-table">
+            <thead>
+               <tr>
+                  <th>{{ __('Data') }}</th>
+                  <th>{{ __('Versão', 'propostas') }}</th>
+                  <th>{{ __('IP', 'propostas') }}</th>
+                  <th>{{ __('Navegador', 'propostas') }}</th>
+               </tr>
+            </thead>
+            <tbody>
+               {% for l in linhas %}
+                  <tr>
+                     <td class="text-nowrap">{{ l.date_creation|formatted_datetime }}</td>
+                     <td>{{ l.versao }}</td>
+                     <td>{{ l.ip }}</td>
+                     <td class="small text-muted">{{ l.user_agent }}</td>
+                  </tr>
+               {% endfor %}
+            </tbody>
+         </table>
+      </div>
+      {% if linhas|length >= limite %}
+         <div class="card-footer small text-muted">{{ __('Mostrando os acessos mais recentes.', 'propostas') }}</div>
+      {% endif %}
+   {% endif %}
+</div>

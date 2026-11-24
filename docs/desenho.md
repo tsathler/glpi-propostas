@@ -31,7 +31,11 @@ Status: Rascunho → Enviada → Visualizada → Aceita / Com dúvida / Expirada
    - Abrir o link estando logado no GLPI não muda o status para *Visualizada*.
    - Os links usam o endereço de **Configuração > Plug-ins > Propostas** ou, em branco, o "URL de acesso" do GLPI. Em ambiente clonado, confira se esse endereço não aponta para outro servidor.
    - Ao atualizar o plugin, rode `bin/console cache:clear` para a rota nova ser carregada.
-3. **Aceite e dúvida:** formulário com nome, CPF (com conferência dos dígitos) e declaração; código de verificação = SHA-256 dos itens e totais da versão; dúvida vira acompanhamento no chamado vinculado; registro de acessos; notificações nativas (proposta aberta, aceita, dúvida).
+3. **Aceite e dúvida** (feito, 0.3.0): formulário com nome, CPF (com conferência dos dígitos) e declaração; código de verificação = SHA-256 de número, versão, título, datas, condições, itens e totais (`Proposta::calcularHashValores()`); dúvida e aceite viram acompanhamento privado no chamado vinculado; registro de acessos; notificações (proposta aberta, aceita, dúvida) para o consultor.
+   - Decisões: dúvida no chamado vinculado (sem chamado, fica só na proposta); CPF cifrado com `GLPIKey` e mascarado (`***.456.789-**`), completo só para quem pode editar; notificação só para o consultor.
+   - Tabelas: `respostas` (aceite e dúvida), `acessos` (aberturas anônimas) e `tentativas` (limite de 10 envios por IP por hora, só o hash do IP).
+   - CSRF: os POST passam pela checagem do próprio GLPI (`CheckCsrfListener`); a página inclui `_glpi_csrf_token`.
+   - GLPI 11.0.4: o `PluginsRouterListener` não passa o método HTTP ao roteador de plugins, então rotas com `methods: ['POST']` nunca casam. As rotas `/aceitar` e `/duvida` não restringem o método e o controller confere o POST.
 4. **Acabamento:** expiração automática (ação automática), impressão/PDF, limite de tentativas por IP.
 
 ## Nginx (rascunho, ainda não aplicado)

@@ -27,6 +27,16 @@
 </header>
 
 <main class="wrap">
+   {% if sucesso == 'duvida' %}
+      <div class="faixa ok" role="status">Sua dúvida foi enviada. O consultor foi avisado e vai responder.</div>
+   {% endif %}
+   {% if p.aceite %}
+      <div class="faixa ok" role="status">
+         <strong>Proposta aceita</strong> em {{ p.aceite.data }} por {{ p.aceite.nome }}.
+         Código de verificação: <code>{{ p.aceite.codigo }}</code>
+      </div>
+   {% endif %}
+
    <div class="cards{{ (p.recorrentes and p.pontuais) ? '' : ' um' }}">
       {% if p.recorrentes %}
          <div class="card forte">
@@ -118,11 +128,66 @@
          <button type="button" class="botao" onclick="window.print()">Imprimir / salvar em PDF</button>
       </div>
    </section>
+
+   {% if p.pode_responder %}
+      <section class="decisao" id="responder">
+         <h2>Vamos avançar?</h2>
+         <p>Aceite a proposta para o seu consultor dar andamento, ou envie suas dúvidas antes.</p>
+
+         {% if erros %}
+            <div class="faixa erro" role="alert">
+               {% for erro in erros %}<div>{{ erro }}</div>{% endfor %}
+            </div>
+         {% endif %}
+
+         <details class="painel" {{ form_aberto == 'aceite' ? 'open' }}>
+            <summary class="botao primario">Aceitar proposta</summary>
+            <form method="post" action="{{ acao_aceite }}" class="formulario" accept-charset="UTF-8">
+               <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+               <p class="nota">
+                  O aceite fica registrado com data, hora e um código de verificação dos valores desta proposta
+                  (versão {{ p.versao }}).
+               </p>
+               <label>Nome completo
+                  <input type="text" name="nome" required maxlength="255" autocomplete="name"
+                         placeholder="Como consta no seu documento" value="{{ valores.nome|default('') }}">
+               </label>
+               <label>CPF
+                  <input type="text" name="cpf" required maxlength="14" inputmode="numeric" autocomplete="off"
+                         placeholder="000.000.000-00">
+               </label>
+               <label class="check">
+                  <input type="checkbox" name="declaracao" value="1" required>
+                  <span>Declaro que tenho poderes para contratar em nome da empresa e que li e concordo com as
+                     condições desta proposta.</span>
+               </label>
+               <button type="submit" class="botao primario">Confirmar aceite</button>
+            </form>
+         </details>
+
+         <details class="painel" {{ form_aberto == 'duvida' ? 'open' }}>
+            <summary class="botao">Tenho dúvidas</summary>
+            <form method="post" action="{{ acao_duvida }}" class="formulario" accept-charset="UTF-8">
+               <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
+               <label>Seu nome
+                  <input type="text" name="nome" required maxlength="255" autocomplete="name"
+                         value="{{ valores.nome|default('') }}">
+               </label>
+               <label>Sua dúvida
+                  <textarea name="mensagem" required maxlength="3000" rows="5">{{ valores.mensagem|default('') }}</textarea>
+               </label>
+               <button type="submit" class="botao primario">Enviar dúvida</button>
+            </form>
+         </details>
+      </section>
+   {% endif %}
 </main>
 
 <footer class="rodape">
    <div class="wrap">
-      Proposta nº {{ p.numero }} · versão {{ p.versao }}. Para aceitar ou tirar dúvidas, fale com o seu consultor.
+      Proposta nº {{ p.numero }} · versão {{ p.versao }}.
+      {% if not p.pode_responder and not p.aceite %}Para aceitar ou tirar dúvidas, fale com o seu consultor.{% endif %}
+      O acesso a esta proposta é registrado e informado ao consultor responsável.
    </div>
 </footer>
 {% endblock %}

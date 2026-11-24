@@ -75,6 +75,62 @@ function plugin_propostas_install(): bool
         ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation} ROW_FORMAT=DYNAMIC");
     }
 
+    // 0.3.0: respostas do cliente (aceite e dúvida). CPF guardado cifrado com a chave do GLPI.
+    $table = 'glpi_plugin_propostas_respostas';
+    if (!$DB->tableExists($table)) {
+        $DB->doQuery("CREATE TABLE `{$table}` (
+            `id`                            INT {$sign} NOT NULL AUTO_INCREMENT,
+            `plugin_propostas_propostas_id` INT {$sign} NOT NULL DEFAULT 0,
+            `tipo`                          VARCHAR(20) NOT NULL DEFAULT '',
+            `versao`                        INT NOT NULL DEFAULT 1,
+            `nome`                          VARCHAR(255) DEFAULT NULL,
+            `cpf_cifrado`                   TEXT,
+            `cpf_mascarado`                 VARCHAR(20) DEFAULT NULL,
+            `mensagem`                      TEXT,
+            `hash_valores`                  CHAR(64) DEFAULT NULL,
+            `ip`                            VARCHAR(45) DEFAULT NULL,
+            `user_agent`                    VARCHAR(255) DEFAULT NULL,
+            `date_creation`                 TIMESTAMP NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `plugin_propostas_propostas_id` (`plugin_propostas_propostas_id`),
+            KEY `tipo` (`tipo`),
+            KEY `date_creation` (`date_creation`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation} ROW_FORMAT=DYNAMIC");
+    }
+
+    // 0.3.0: cada abertura do link por quem não está logado no GLPI.
+    $table = 'glpi_plugin_propostas_acessos';
+    if (!$DB->tableExists($table)) {
+        $DB->doQuery("CREATE TABLE `{$table}` (
+            `id`                            INT {$sign} NOT NULL AUTO_INCREMENT,
+            `plugin_propostas_propostas_id` INT {$sign} NOT NULL DEFAULT 0,
+            `versao`                        INT NOT NULL DEFAULT 1,
+            `ip`                            VARCHAR(45) DEFAULT NULL,
+            `user_agent`                    VARCHAR(255) DEFAULT NULL,
+            `date_creation`                 TIMESTAMP NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `plugin_propostas_propostas_id` (`plugin_propostas_propostas_id`),
+            KEY `date_creation` (`date_creation`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation} ROW_FORMAT=DYNAMIC");
+    }
+
+    // 0.3.0: envios (aceite/dúvida) por IP, para o limite por hora. Só o hash do IP; linhas com
+    // mais de 1 hora são apagadas a cada envio.
+    $table = 'glpi_plugin_propostas_tentativas';
+    if (!$DB->tableExists($table)) {
+        $DB->doQuery("CREATE TABLE `{$table}` (
+            `id`            INT {$sign} NOT NULL AUTO_INCREMENT,
+            `ip_hash`       CHAR(64) NOT NULL,
+            `date_creation` TIMESTAMP NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `ip_data` (`ip_hash`, `date_creation`),
+            KEY `date_creation` (`date_creation`)
+        ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation} ROW_FORMAT=DYNAMIC");
+    }
+
+    // 0.3.0: notificações para o consultor (aberta, aceita, dúvida). Só cria o que não existir.
+    GlpiPlugin\Propostas\NotificationTargetProposta::instalar();
+
     // Direito próprio, criado só na primeira instalação (reinstalar não mexe no que foi
     // ajustado em Administração > Perfis). Perfis que administram a configuração recebem
     // acesso total; os outros começam sem acesso.
@@ -132,7 +188,16 @@ function plugin_propostas_uninstall(): bool
 {
     global $DB;
 
-    foreach (['glpi_plugin_propostas_propostaitems', 'glpi_plugin_propostas_propostas'] as $table) {
+    GlpiPlugin\Propostas\NotificationTargetProposta::desinstalar();
+
+    $tabelas = [
+        'glpi_plugin_propostas_tentativas',
+        'glpi_plugin_propostas_acessos',
+        'glpi_plugin_propostas_respostas',
+        'glpi_plugin_propostas_propostaitems',
+        'glpi_plugin_propostas_propostas',
+    ];
+    foreach ($tabelas as $table) {
         if ($DB->tableExists($table)) {
             $DB->dropTable($table);
         }
