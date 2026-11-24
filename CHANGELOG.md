@@ -7,6 +7,22 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ### Added
 
+- **Aceitar proposta** na página pública: nome completo, CPF (com conferência dos dígitos) e declaração. Grava data, IP, navegador, CPF cifrado com a chave do GLPI (e mascarado) e o SHA-256 dos valores aceitos; a página passa a mostrar "Proposta aceita" com o código de verificação.
+- **Tenho dúvidas** na página pública: nome e mensagem; status *Com dúvida*.
+- Aceite e dúvida viram acompanhamento **privado** no chamado vinculado, sem disparar as notificações do chamado.
+- Notificações para o consultor: proposta aberta, aceita e com dúvida (Configurar > Notificações).
+- Abas **Respostas do cliente** (CPF completo só para quem pode editar; indica se o código do aceite confere com os valores atuais) e **Acessos ao link** (data, IP e navegador de cada abertura).
+- Limite de 10 envios por IP por hora (resposta 429), contado na tabela `glpi_plugin_propostas_tentativas` só com o hash do IP.
+
+### Fixed
+
+- Rotas só-POST de plugin não casam no GLPI 11.0.4 (o roteador de plugins compara tudo como GET). As rotas de aceite e dúvida aceitam qualquer método e conferem o POST no controller.
+- Texto com bytes que não são UTF-8 válido (nome, mensagem, User-Agent) é limpo antes de gravar, em vez de causar erro 500.
+
+## [0.2.0]
+
+### Added
+
 - Link público da proposta (`/plugins/propostas/p/{token}`), sem login: página própria (sem CSS/JS do GLPI) com resumo de valores, itens recorrentes com barra de proporção, implantação, condições comerciais e impressão/PDF. Envia `noindex` e `no-store`.
 - Botões **Gerar link**, **Reabrir para edição** (nova versão, invalida o link) e **Cancelar proposta** na aba Proposta.
 - Token aleatório de 256 bits: o banco guarda o SHA-256 para a busca e uma cópia cifrada com a chave do GLPI para o consultor copiar o link de novo. O link expira no fim do último dia de validade.
