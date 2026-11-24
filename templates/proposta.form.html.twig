@@ -21,40 +21,76 @@
          helper: __('Validade, condições, itens e blocos de texto do modelo são copiados para a proposta. O modelo não pode ser trocado depois.', 'propostas')
       }) }}
 
-      {# Ao escolher o modelo: o valor de cada item (editável), o desconto (%) e a prévia do valor final. #}
-      <div class="col-12 mb-3 d-none" id="propostas-modelo-campos" aria-live="polite">
-         <div class="card">
-            <div class="card-header py-2">
-               <h4 class="card-title mb-0"><i class="ti ti-receipt"></i> {{ __('Valores desta proposta', 'propostas') }}</h4>
-               <span class="text-muted small ms-auto">{{ __('Vêm do modelo. Ajuste se precisar.', 'propostas') }}</span>
-            </div>
-            <div class="table-responsive">
-               <table class="table table-vcenter card-table mb-0">
-                  <thead>
-                     <tr>
-                        <th>{{ __('Item', 'propostas') }}</th>
-                        <th class="text-end" style="width: 190px;">{{ __('Valor', 'propostas') }}</th>
-                        <th class="text-end" style="width: 150px;">{{ __('Valor final', 'propostas') }}</th>
-                     </tr>
-                  </thead>
-                  <tbody id="propostas-modelo-itens"></tbody>
-               </table>
-            </div>
-            <div class="card-footer py-2 d-flex flex-wrap align-items-center gap-3">
-               <label class="form-check form-switch mb-0">
-                  <input class="form-check-input" type="checkbox" name="_aplicar_desconto" value="1" id="propostas-aplicar-desconto">
-                  <span class="form-check-label">{{ __('Aplicar desconto a todos os itens', 'propostas') }}</span>
-               </label>
-               <div class="input-group input-group-sm" style="width: 110px;">
-                  <input type="number" class="form-control text-end" name="_desconto_pct" id="propostas-desconto-pct"
-                         min="0" max="100" step="0.01" aria-label="{{ __('Desconto (%)', 'propostas') }}" disabled>
-                  <span class="input-group-text">%</span>
-               </div>
-               <span class="text-muted small" id="propostas-desconto-dica"></span>
-            </div>
-            <div class="form-text px-3 pb-2 text-danger" id="propostas-modelo-msg"></div>
-         </div>
-      </div>
+      {# Ao escolher o modelo: o valor de cada item (editável), o desconto (%) e o valor final.
+         Campo de largura total do GLPI: o rótulo fica na coluna dos rótulos e a tabela na dos campos. #}
+      {% set quadro_valores %}
+         <table class="propostas-valores">
+            <thead>
+               <tr>
+                  <th scope="col">{{ __('Item', 'propostas') }}</th>
+                  <th scope="col" class="col-valor">{{ __('Valor', 'propostas') }}</th>
+                  <th scope="col" class="col-final">{{ __('Valor final', 'propostas') }}</th>
+               </tr>
+            </thead>
+            <tbody id="propostas-modelo-itens"></tbody>
+            <tfoot>
+               <tr>
+                  <td>
+                     <label class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" name="_aplicar_desconto" value="1" id="propostas-aplicar-desconto">
+                        <span class="form-check-label">{{ __('Aplicar desconto a todos os itens', 'propostas') }}</span>
+                     </label>
+                     <span class="propostas-dica" id="propostas-desconto-dica"></span>
+                  </td>
+                  <td class="col-valor">
+                     <div class="input-group">
+                        <input type="number" class="form-control text-end" name="_desconto_pct" id="propostas-desconto-pct"
+                               min="0" max="100" step="0.01" aria-label="{{ __('Desconto (%)', 'propostas') }}" disabled>
+                        <span class="input-group-text">%</span>
+                     </div>
+                  </td>
+                  <td class="col-final" id="propostas-economia" data-rotulo="{{ __('Diferença:', 'propostas') }}"></td>
+               </tr>
+            </tfoot>
+         </table>
+         <div class="form-text" id="propostas-modelo-dica">{{ __('Os valores vêm do modelo. Ajuste se precisar.', 'propostas') }}</div>
+         <div class="form-text text-danger" id="propostas-modelo-msg"></div>
+      {% endset %}
+      {{ fields.htmlField('', quadro_valores, __('Valores', 'propostas'), {
+         full_width: true,
+         wrapper_class: 'w-100',
+         add_field_class: 'd-none',
+         add_label_class: 'align-self-start propostas-rotulo-valores',
+         add_field_attribs: {id: 'propostas-modelo-campos', 'aria-live': 'polite'}
+      }) }}
+      <style>
+         /* Mesmas medidas dos campos do formulário: 40 px de altura, 14 px, cantos de 10 px; linhas de 48 px. */
+         .propostas-valores { width: 100%; border-collapse: collapse; font-size: 14px; }
+         /* Rótulo ao lado (telas largas): na altura do primeiro item, não do cabeçalho da tabela. */
+         @media (min-width: 1400px) { .propostas-rotulo-valores { margin-top: 28px; } }
+         .propostas-valores th { font-size: 12px; font-weight: 600; color: var(--tblr-secondary, #667382);
+            text-align: left; padding: 0 0 6px; border-bottom: 1px solid var(--tblr-border-color, #dce1e7); background: none; }
+         .propostas-valores td { height: 48px; padding: 4px 0; vertical-align: middle;
+            border-bottom: 1px solid var(--tblr-border-color-translucent, rgba(4, 32, 69, .1)); }
+         .propostas-valores tfoot td { border-bottom: 0; padding-top: 8px; }
+         .propostas-valores .col-valor { width: 200px; padding-left: 16px; }
+         .propostas-valores .col-final { width: 140px; padding-left: 16px; text-align: right; font-weight: 600; white-space: nowrap; }
+         .propostas-valores .badge { margin-left: 8px; vertical-align: middle; }
+         .propostas-valores .propostas-dica { display: block; margin: 2px 0 0 40px; font-size: 12px; color: var(--tblr-secondary, #667382); }
+         .propostas-valores .form-switch { padding-left: 40px; }
+         @media (max-width: 767.98px) {
+            .propostas-valores thead { display: none; }
+            /* Uma coluna: nome, campo na largura toda e o valor final embaixo, com rótulo. */
+            .propostas-valores tr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 10px 0;
+               border-bottom: 1px solid var(--tblr-border-color-translucent, rgba(4, 32, 69, .1)); }
+            .propostas-valores tfoot tr { border-bottom: 0; }
+            .propostas-valores td { height: auto; border: 0; padding: 0; }
+            .propostas-valores .col-valor { width: auto; padding-left: 0; }
+            .propostas-valores .col-final { width: auto; padding-left: 0; text-align: left; }
+            .propostas-valores .col-final:not(:empty)::before { content: attr(data-rotulo) " "; font-weight: 400;
+               color: var(--tblr-secondary, #667382); }
+         }
+      </style>
       <script>
          (function () {
             const url = {{ modelo_url|json_encode|raw }};
@@ -63,12 +99,14 @@
             const aplicar = document.getElementById('propostas-aplicar-desconto');
             const pct = document.getElementById('propostas-desconto-pct');
             const dica = document.getElementById('propostas-desconto-dica');
+            const economia = document.getElementById('propostas-economia');
             const msg = document.getElementById('propostas-modelo-msg');
             const moeda = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'});
             const textos = {
                mensal: {{ __('Mensal', 'propostas')|json_encode|raw }},
                unico: {{ __('Pagamento único', 'propostas')|json_encode|raw }},
                sugerido: {{ __('Sugerido pelo modelo: {pct}%', 'propostas')|json_encode|raw }},
+               final: {{ __('Valor final:', 'propostas')|json_encode|raw }},
                vazio: {{ __('Este modelo não tem itens com valor.', 'propostas')|json_encode|raw }},
                erro: {{ __('Não foi possível carregar os itens do modelo.', 'propostas')|json_encode|raw }}
             };
@@ -78,18 +116,22 @@
                return aplicar.checked && v > 0 ? Math.min(v, 100) : 0;
             }
 
-            // Mostra o valor de cada item já com o desconto, como o cliente vai ver.
+            // Valor final de cada item já com o desconto, como o cliente vai ver, e a diferença total.
             function atualizar() {
                pct.disabled = !aplicar.checked;
                const p = percentual();
+               let diferenca = 0;
                lista.querySelectorAll('tr').forEach(function (tr) {
                   const valor = parseFloat(tr.querySelector('input').value) || 0;
                   const final = Math.round(valor * (1 - p / 100) * 100) / 100;
-                  const celula = tr.querySelector('.propostas-final');
+                  diferenca += valor - final;
+                  const celula = tr.querySelector('.col-final');
                   celula.textContent = moeda.format(final);
                   celula.classList.toggle('text-success', p > 0);
-                  celula.classList.toggle('text-muted', p === 0);
+                  celula.classList.toggle('text-secondary', p === 0);
                });
+               economia.textContent = p > 0 ? '−' + moeda.format(diferenca) : '';
+               economia.className = 'col-final' + (p > 0 ? ' text-success' : '');
             }
 
             function limpar() {
@@ -110,13 +152,14 @@
                rotulo.className = 'mb-0';
                rotulo.textContent = item.nome;
                const tipo = document.createElement('span');
-               tipo.className = 'badge ms-2 ' + (item.tipo === 'pontual' ? 'bg-secondary-lt' : 'bg-blue-lt');
+               tipo.className = 'badge ' + (item.tipo === 'pontual' ? 'bg-secondary-lt' : 'bg-blue-lt');
                tipo.textContent = item.tipo === 'pontual' ? textos.unico : textos.mensal;
                nome.append(rotulo, tipo);
 
                const valor = document.createElement('td');
+               valor.className = 'col-valor';
                const grupo = document.createElement('div');
-               grupo.className = 'input-group input-group-sm';
+               grupo.className = 'input-group';
                const rs = document.createElement('span');
                rs.className = 'input-group-text';
                rs.textContent = 'R$';
@@ -133,7 +176,8 @@
                valor.append(grupo);
 
                const final = document.createElement('td');
-               final.className = 'text-end fw-bold propostas-final';
+               final.className = 'col-final';
+               final.dataset.rotulo = textos.final;
 
                tr.append(nome, valor, final);
                return tr;
@@ -247,10 +291,15 @@
       })) }}
    {% endif %}
 
-   {{ fields.dropdownField('Ticket', 'tickets_id', item.fields['tickets_id'], __('Chamado vinculado', 'propostas'), travado|merge({
-      entity: item.fields['entities_id'],
-      helper: __('Em branco, o plugin abre um chamado ao gerar o link.', 'propostas')
-   })) }}
+   {# Na criação não há chamado: o plugin abre um ao gerar o link. Depois, dá para vincular um existente. #}
+   {% if item.isNewItem() %}
+      {{ fields.htmlField('', '<span class="text-secondary"><i class="ti ti-lock"></i> ' ~ __('Aberto automaticamente ao gerar o link', 'propostas')|e ~ '</span>', __('Chamado vinculado', 'propostas')) }}
+   {% else %}
+      {{ fields.dropdownField('Ticket', 'tickets_id', item.fields['tickets_id'], __('Chamado vinculado', 'propostas'), travado|merge({
+         entity: item.fields['entities_id'],
+         helper: __('Em branco, o plugin abre um chamado ao gerar o link.', 'propostas')
+      })) }}
+   {% endif %}
 
    {{ fields.dateField('data_emissao', item.fields['data_emissao'], __('Emissão', 'propostas'), travado) }}
 

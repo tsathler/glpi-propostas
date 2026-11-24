@@ -217,6 +217,9 @@ class Proposta extends CommonDBTM
         foreach (self::CAMPOS_INTERNOS as $campo) {
             unset($input[$campo]);
         }
+        // Proposta nova nasce sem chamado: o plugin abre um ao gerar o link. Vincular um
+        // chamado existente só depois da criação, pelo formulário da proposta.
+        unset($input['tickets_id']);
         if (empty($input['data_emissao'])) {
             $input['data_emissao'] = date('Y-m-d');
         }
