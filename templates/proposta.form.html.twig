@@ -145,6 +145,15 @@
                      {% endif %}
                      {{ __('Abrir o link estando logado no GLPI não conta como visualização do cliente.', 'propostas') }}
                   </div>
+               {% elseif link_oculto %}
+                  <p class="text-muted mb-2">
+                     {{ __('Link enviado ao cliente. O endereço aparece só para quem pode editar a proposta.', 'propostas') }}
+                     {% if link_expirado %}
+                        <span class="text-danger">{{ __('Link expirado em', 'propostas') }} {{ link_expira|formatted_datetime }}.</span>
+                     {% else %}
+                        {{ __('Válido até', 'propostas') }} {{ link_expira|formatted_datetime }}.
+                     {% endif %}
+                  </p>
                {% elseif editavel %}
                   <p class="text-muted mb-2">
                      {{ __('Ao gerar o link, a proposta é travada para edição e passa para "Enviada".', 'propostas') }}

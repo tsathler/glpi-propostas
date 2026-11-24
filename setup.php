@@ -18,7 +18,7 @@ use GlpiPlugin\Propostas\PropostaBloco;
 use GlpiPlugin\Propostas\PropostaItem;
 use GlpiPlugin\Propostas\Resposta;
 
-define('PLUGIN_PROPOSTAS_VERSION', '1.2.0');
+define('PLUGIN_PROPOSTAS_VERSION', '1.2.1');
 define('PLUGIN_PROPOSTAS_MIN_GLPI', '11.0.0');
 define('PLUGIN_PROPOSTAS_MAX_GLPI', '11.99.99');
 define('PLUGIN_PROPOSTAS_RIGHT', 'plugin_propostas_proposta');
@@ -49,6 +49,12 @@ function plugin_init_propostas(): void
     global $PLUGIN_HOOKS;
 
     $PLUGIN_HOOKS[Hooks::CSRF_COMPLIANT]['propostas'] = true;
+
+    // Campos cifrados com a chave do GLPI: entram na troca de chave (glpi:security:change_key).
+    $PLUGIN_HOOKS[Hooks::SECURED_FIELDS]['propostas'] = [
+        'glpi_plugin_propostas_propostas.token_cifrado',
+        'glpi_plugin_propostas_respostas.cpf_cifrado',
+    ];
 
     Plugin::registerClass(Proposta::class, ['notificationtemplates_types' => true]);
     Plugin::registerClass(PropostaItem::class);

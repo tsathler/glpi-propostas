@@ -68,8 +68,10 @@ class NotificationTargetProposta extends NotificationTarget
         $this->data['##proposta.titulo##']   = (string) $proposta->fields['name'];
         $this->data['##proposta.versao##']   = (string) $proposta->fields['versao'];
         $this->data['##proposta.status##']   = (string) $status;
-        $this->data['##proposta.cliente##']  = (string) ($resposta['nome'] ?? '');
-        $this->data['##proposta.mensagem##'] = (string) ($resposta['mensagem'] ?? '');
+        // Texto digitado pelo cliente: sem "<" e ">" o GLPI trata como texto puro, não como HTML
+        // (evita link ou imagem externa enviados pela página pública dentro do e-mail).
+        $this->data['##proposta.cliente##']  = self::textoPuro((string) ($resposta['nome'] ?? ''));
+        $this->data['##proposta.mensagem##'] = self::textoPuro((string) ($resposta['mensagem'] ?? ''));
         $this->data['##proposta.codigo##']   = (string) ($resposta['codigo'] ?? '');
         $this->data['##proposta.url##']      = rtrim((string) $CFG_GLPI['url_base'], '/')
             . Proposta::getFormURLWithID($proposta->getID(), false);
@@ -80,6 +82,11 @@ class NotificationTargetProposta extends NotificationTarget
                 $this->data[$tag] = $values['label'];
             }
         }
+    }
+
+    private static function textoPuro(string $texto): string
+    {
+        return str_replace(['<', '>'], ['‹', '›'], $texto);
     }
 
     public function getTags()
@@ -115,6 +122,14 @@ class NotificationTargetProposta extends NotificationTarget
     public static function instalar(): void
     {
         global $DB;
+
+        // Só na primeira instalação: reinstalar (--force) não recria notificação apagada nem
+        // duplica o modelo renomeado pelo administrador.
+        $marca = \Config::getConfigurationValues('plugin:propostas', ['instalado_notificacoes']);
+        if (!empty($marca['instalado_notificacoes'])) {
+            return;
+        }
+        \Config::setConfigurationValues('plugin:propostas', ['instalado_notificacoes' => '1']);
 
         $itemtype = Proposta::class;
         $agora    = $_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s');

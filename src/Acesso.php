@@ -26,14 +26,27 @@ class Acesso extends CommonGLPI
         return _n('Acesso ao link', 'Acessos ao link', $nb, 'propostas');
     }
 
+    /** Reaberturas do mesmo IP dentro deste intervalo não geram outra linha. */
+    private const INTERVALO_MINUTOS = 10;
+
     public static function registrar(int $propostas_id, int $versao, string $ip, string $user_agent): void
     {
         global $DB;
 
+        $ip = mb_substr($ip, 0, 45);
+        if (countElementsInTable(self::TABELA, [
+            'plugin_propostas_propostas_id' => $propostas_id,
+            'versao'                        => $versao,
+            'ip'                            => $ip,
+            'date_creation'                 => ['>=', date('Y-m-d H:i:s', time() - self::INTERVALO_MINUTOS * MINUTE_TIMESTAMP)],
+        ]) > 0) {
+            return;
+        }
+
         $DB->insert(self::TABELA, [
             'plugin_propostas_propostas_id' => $propostas_id,
             'versao'                        => $versao,
-            'ip'                            => mb_substr($ip, 0, 45),
+            'ip'                            => $ip,
             'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
             'date_creation'                 => Session::getCurrentTime() ?? date('Y-m-d H:i:s'),
         ]);

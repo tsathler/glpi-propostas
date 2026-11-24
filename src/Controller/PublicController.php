@@ -27,8 +27,13 @@ final class PublicController extends AbstractController
 {
     private const TOKEN = '[A-Za-z0-9_-]{43}';
 
-    /** Envios (aceite + dúvida) permitidos por IP a cada hora. */
+    /** Envios (aceite + dúvida) permitidos por IP (ou rede /64 do IPv6) a cada hora. */
     private const LIMITE_POR_HORA = 10;
+
+    private const TABELA_TENTATIVAS = 'glpi_plugin_propostas_tentativas';
+
+    /** Linha gravada por verificarLimite() nesta requisição. */
+    private int $tentativa_id = 0;
 
     #[Route('/p/{token}', name: 'proposta_publica', requirements: ['token' => self::TOKEN], methods: ['GET'])]
     #[SecurityStrategy(Firewall::STRATEGY_NO_CHECK)]
@@ -79,6 +84,7 @@ final class PublicController extends AbstractController
             (string) $request->headers->get('User-Agent', '')
         );
         if ($erros !== []) {
+            $this->desfazerTentativa();
             return $this->paginaProposta($proposta, $token, [
                 'form_aberto' => 'aceite',
                 'erros'       => $erros,
@@ -113,6 +119,7 @@ final class PublicController extends AbstractController
             (string) $request->headers->get('User-Agent', '')
         );
         if ($erros !== []) {
+            $this->desfazerTentativa();
             return $this->paginaProposta($proposta, $token, [
                 'form_aberto' => 'duvida',
                 'erros'       => $erros,
@@ -155,25 +162,53 @@ final class PublicController extends AbstractController
     {
         global $DB;
 
-        $tabela  = 'glpi_plugin_propostas_tentativas';
-        $ip_hash = hash('sha256', (string) $request->getClientIp());
+        $ip_hash = hash('sha256', self::origem((string) $request->getClientIp()));
         $agora   = new \DateTimeImmutable();
         $limite  = $agora->modify('-1 hour')->format('Y-m-d H:i:s');
 
-        $DB->delete($tabela, ['date_creation' => ['<', $limite]]);
-        $envios = countElementsInTable($tabela, [
+        $DB->delete(self::TABELA_TENTATIVAS, ['date_creation' => ['<', $limite]]);
+        // Grava antes de contar: envios simultâneos se enxergam e no máximo o limite passa.
+        $DB->insert(self::TABELA_TENTATIVAS, ['ip_hash' => $ip_hash, 'date_creation' => $agora->format('Y-m-d H:i:s')]);
+        $this->tentativa_id = (int) $DB->insertId();
+        $envios = countElementsInTable(self::TABELA_TENTATIVAS, [
             'ip_hash'       => $ip_hash,
             'date_creation' => ['>=', $limite],
         ]);
-        if ($envios >= self::LIMITE_POR_HORA) {
+        if ($envios > self::LIMITE_POR_HORA) {
+            $this->desfazerTentativa();
             return $this->pagina('@propostas/publico/indisponivel.html.twig', [
                 'titulo'   => 'Muitas tentativas',
                 'mensagem' => 'Recebemos muitos envios a partir desta conexão. Aguarde alguns minutos e tente de novo, ou fale com o seu consultor.',
             ], Response::HTTP_TOO_MANY_REQUESTS);
         }
-        $DB->insert($tabela, ['ip_hash' => $ip_hash, 'date_creation' => $agora->format('Y-m-d H:i:s')]);
 
         return null;
+    }
+
+    /**
+     * Envio recusado pela validação (CPF errado, campo vazio) não conta para o limite.
+     */
+    private function desfazerTentativa(): void
+    {
+        global $DB;
+
+        if ($this->tentativa_id > 0) {
+            $DB->delete(self::TABELA_TENTATIVAS, ['id' => $this->tentativa_id]);
+            $this->tentativa_id = 0;
+        }
+    }
+
+    /**
+     * Origem usada no limite: o IPv4 inteiro ou a rede /64 do IPv6 (cada cliente IPv6 costuma ter milhões de endereços).
+     */
+    private static function origem(string $ip): string
+    {
+        $bin = @inet_pton($ip);
+        if ($bin !== false && strlen($bin) === 16) {
+            return inet_ntop(substr($bin, 0, 8) . str_repeat("\0", 8)) . '/64';
+        }
+
+        return $ip;
     }
 
     /**

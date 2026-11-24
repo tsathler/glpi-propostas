@@ -4,7 +4,7 @@ Propostas comerciais dentro do GLPI. O consultor monta a proposta com itens reco
 
 ## Requisitos
 
-- GLPI 11.0 ou superior (testado no 11.0.4)
+- GLPI 11.x (testado no 11.0.4; o GLPI 12 ainda não é aceito)
 - PHP 8.2 ou superior, com `mbstring`
 
 ## Instalação
@@ -37,13 +37,16 @@ sudo -u www-data php bin/console cache:clear
 - **Abas da proposta:** **Respostas do cliente** e **Acessos ao link**.
 - **Notificações ao consultor:** proposta aberta, aceita e com dúvida. Exigem as notificações por e-mail ativas no GLPI.
 - **Duplicar:** cria um rascunho novo a partir de uma proposta.
-- **Expiração automática:** a ação automática diária **expirar** marca como *Expirada* a proposta cujo link venceu.
+- **Expiração automática:** a ação automática diária **expirar** marca como *Expirada* a proposta cujo link venceu. Ela roda pelo cron do sistema (modo CLI do GLPI); sem o cron configurado, o link vence no prazo, mas o status só muda quando a ação rodar.
+- **Exclusão:** proposta com aceite registrado não pode ser excluída (use *Cancelar*), para não perder a prova do aceite. **Desinstalar o plugin apaga todas as propostas, aceites e acessos**: faça backup antes.
 
 ## Segurança do link público
 
 - **Token:** 32 bytes aleatórios (base64url, 43 caracteres). O banco guarda o SHA-256 do token, usado na busca, e uma cópia cifrada com a chave do GLPI, que permite ao consultor copiar o link de novo.
 - **Validade:** o link vale até as 23:59:59 do último dia de validade. Link vencido responde 410; token inexistente ou revogado responde 404.
-- **Proteção dos envios:** o GLPI confere o token anti-falsificação (CSRF). O limite é de 10 envios por IP por hora, e o banco guarda só o hash do IP.
+- **Proteção dos envios:** o GLPI confere o token anti-falsificação (CSRF). O limite é de 10 envios por IP (ou rede /64 do IPv6) por hora, sem contar envios recusados pela validação, e de 5 dúvidas por proposta a cada 24 horas. O banco guarda só o hash do IP.
+- **Respostas simultâneas:** aceite, dúvida e as ações do consultor travam a proposta no banco, então duas respostas ao mesmo tempo não geram aceite duplo nem aceite numa versão reaberta.
+- **Quem vê o link:** só quem pode editar a proposta vê e copia o link; quem só lê vê que ele foi enviado e a validade.
 - **CPF:** guardado cifrado, mais uma versão mascarada (`***.456.789-**`). O CPF completo só aparece para quem pode editar a proposta.
 - **Código de verificação:** é o SHA-256 de número, versão, título, datas, condições, itens e totais e, desde a versão 1.1.0 (formato 2), também da empresa (razão social e CNPJ), dos blocos de texto e do cargo de quem aceitou. Cada aceite guarda o formato em que foi calculado, e a aba Respostas confere cada um no próprio formato.
 - **Cabeçalhos:** a página envia `X-Robots-Tag: noindex`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer` e `X-Frame-Options: DENY`.
