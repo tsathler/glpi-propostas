@@ -41,6 +41,90 @@ final class Calculo
         return array_map(static fn (float $v): float => round($v, 2), $totais);
     }
 
+    /** Exibição ao cliente: itens com quantidade, subtotal e totais somados (o padrão). */
+    public const EXIBICAO_TOTAL = 'total';
+
+    /** Exibição ao cliente: preço por unidade ("de R$ X por R$ Y"), sem somar totais. */
+    public const EXIBICAO_UNIDADE = 'unidade';
+
+    public static function exibicaoValida(mixed $valor): string
+    {
+        return $valor === self::EXIBICAO_UNIDADE ? self::EXIBICAO_UNIDADE : self::EXIBICAO_TOTAL;
+    }
+
+    /**
+     * Percentual entre 0 e 100, com 2 casas. Aceita "5", "5.5" e "5,5"; o resto vira 0.
+     */
+    public static function percentual(mixed $valor): float
+    {
+        $numero = self::lerValor($valor);
+
+        return $numero === null ? 0.0 : round(min(100.0, $numero), 2);
+    }
+
+    /**
+     * Valor digitado no formulário: "123.45", "123,45" ou "1.234,56". Null se vazio, inválido ou negativo.
+     */
+    public static function lerValor(mixed $valor): ?float
+    {
+        if (is_int($valor) || is_float($valor)) {
+            return $valor >= 0 ? (float) $valor : null;
+        }
+        $texto = trim((string) $valor);
+        if ($texto === '') {
+            return null;
+        }
+        if (str_contains($texto, ',')) {
+            // Formato brasileiro: ponto de milhar, vírgula decimal.
+            $texto = str_replace(['.', ','], ['', '.'], $texto);
+        }
+        if (!preg_match('/^\d+(\.\d+)?$/', $texto)) {
+            return null;
+        }
+
+        return (float) $texto;
+    }
+
+    /**
+     * Itens do modelo como vão para a proposta: o valor digitado (quando válido) substitui o do
+     * modelo, e o desconto especial, quando aplicado, vale para todos os itens.
+     *
+     * @param list<array<string, mixed>> $itens_modelo linhas de ModeloItem (com id)
+     * @param array<int|string, mixed> $valores valor digitado por id do item do modelo
+     * @param float|null $desconto_especial null = manter o desconto de cada item
+     * @return list<array<string, mixed>>
+     */
+    public static function itensDaCopia(array $itens_modelo, array $valores, ?float $desconto_especial): array
+    {
+        $copia = [];
+        foreach ($itens_modelo as $item) {
+            $digitado = self::lerValor($valores[(int) ($item['id'] ?? 0)] ?? null);
+            if ($digitado !== null) {
+                $item['valor_unitario'] = $digitado;
+            }
+            if ($desconto_especial !== null) {
+                $item['desconto_pct'] = $desconto_especial;
+            }
+            $copia[] = $item;
+        }
+
+        return $copia;
+    }
+
+    /**
+     * Desconto escolhido na criação da proposta: só com a opção marcada. O percentual digitado vale
+     * no lugar do sugerido pelo modelo; vazio usa o sugerido. Zero ou nada = sem desconto (null).
+     */
+    public static function descontoDaCriacao(bool $aplicar, mixed $digitado, float $sugerido): ?float
+    {
+        if (!$aplicar) {
+            return null;
+        }
+        $pct = self::lerValor($digitado) === null ? self::percentual($sugerido) : self::percentual($digitado);
+
+        return $pct > 0 ? $pct : null;
+    }
+
     /** Formato do hash gravado nos aceites novos. O formato 1 continua valendo para os antigos. */
     public const HASH_FORMATO_ATUAL = 2;
 

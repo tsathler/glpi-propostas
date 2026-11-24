@@ -43,7 +43,8 @@ class ModeloBloco extends CommonDBChild
         foreach (
             $DB->request([
                 'SELECT'     => [self::getTable() . '.id', self::getTable() . '.plugin_propostas_blocos_id', self::getTable() . '.ordem',
-                    Bloco::getTable() . '.name', Bloco::getTable() . '.conteudo', Bloco::getTable() . '.is_active'],
+                    Bloco::getTable() . '.name', Bloco::getTable() . '.conteudo', Bloco::getTable() . '.is_active',
+                    Bloco::getTable() . '.depois_dos_valores'],
                 'FROM'       => self::getTable(),
                 'INNER JOIN' => [Bloco::getTable() => ['ON' => [self::getTable() => 'plugin_propostas_blocos_id', Bloco::getTable() => 'id']]],
                 'WHERE'      => [self::getTable() . '.' . self::$items_id => $modelos_id],

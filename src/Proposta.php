@@ -253,6 +253,9 @@ class Proposta extends CommonDBTM
             }
             $input = $modelo->aplicarNoInput($input);
         }
+        if (array_key_exists('exibicao', $input)) {
+            $input['exibicao'] = Calculo::exibicaoValida($input['exibicao']);
+        }
 
         $entidade = (int) ($input['entities_id'] ?? Session::getActiveEntity());
         if (!$this->validarVinculos($input, $entidade)) {
@@ -268,7 +271,17 @@ class Proposta extends CommonDBTM
         if ($modelos_id > 0 && empty($this->input['_sem_copiar_modelo'])) {
             $modelo = new Modelo();
             if ($modelo->getFromDB($modelos_id)) {
-                $modelo->copiarParaProposta($this->getID());
+                // Campos mostrados ao escolher o modelo: valor de cada item e o desconto (%).
+                $valores = $this->input['_modelo_valores'] ?? [];
+                $modelo->copiarParaProposta(
+                    $this->getID(),
+                    is_array($valores) ? $valores : [],
+                    Calculo::descontoDaCriacao(
+                        !empty($this->input['_aplicar_desconto']),
+                        $this->input['_desconto_pct'] ?? null,
+                        $modelo->getDescontoEspecial()
+                    )
+                );
             }
         }
         if ((int) ($this->fields['tickets_id'] ?? 0) > 0) {
@@ -324,6 +337,9 @@ class Proposta extends CommonDBTM
         }
         // O modelo de origem não muda depois da criação.
         unset($input['plugin_propostas_modelos_id']);
+        if (array_key_exists('exibicao', $input)) {
+            $input['exibicao'] = Calculo::exibicaoValida($input['exibicao']);
+        }
 
         if (!$this->isEditavel()) {
             $ignorados = [];
@@ -457,9 +473,22 @@ class Proposta extends CommonDBTM
             'cnpj_consulta' => (bool) (\Config::getConfigurationValue('plugin:propostas', 'cnpj_consulta_ativa') ?? false),
             'cnpj_url'      => \Plugin::getWebDir('propostas') . '/ajax/cnpj.php',
             'consultores'   => $this->opcoesConsultor(),
+            'modelo_url'    => \Plugin::getWebDir('propostas') . '/ajax/modelo.php',
+            'exibicoes'     => Modelo::getOpcoesExibicao(),
         ]);
 
         return true;
+    }
+
+    /**
+     * Entidade em que uma proposta nova vai ser criada: a entidade padrão do plugin, quando
+     * configurada e acessível ao usuário; senão, a entidade ativa.
+     */
+    public static function entidadeDeCriacao(): int
+    {
+        $padrao = (int) (\Config::getConfigurationValue('plugin:propostas', 'propostas_entities_id') ?? -1);
+
+        return $padrao >= 0 && Session::haveAccessToEntity($padrao) ? $padrao : (int) Session::getActiveEntity();
     }
 
     /**
@@ -485,14 +514,8 @@ class Proposta extends CommonDBTM
             return null;
         }
 
-        // Proposta nova: a entidade padrão do plugin, se for usada na criação.
-        $entidade = (int) $this->fields['entities_id'];
-        if ($this->isNewItem()) {
-            $padrao = (int) (\Config::getConfigurationValue('plugin:propostas', 'propostas_entities_id') ?? -1);
-            if ($padrao >= 0 && Session::haveAccessToEntity($padrao)) {
-                $entidade = $padrao;
-            }
-        }
+        // Proposta nova: a entidade em que ela vai ser criada.
+        $entidade = $this->isNewItem() ? self::entidadeDeCriacao() : (int) $this->fields['entities_id'];
 
         $opcoes = [];
         $user = new \User();
@@ -641,6 +664,7 @@ class Proposta extends CommonDBTM
             'validade_dias'      => $this->fields['validade_dias'],
             'aviso_previo_dias'  => $this->fields['aviso_previo_dias'],
             'condicoes'          => $this->fields['condicoes'],
+            'exibicao'           => $this->fields['exibicao'] ?? Calculo::EXIBICAO_TOTAL,
         ]);
         if (!$id) {
             return false;
@@ -663,6 +687,7 @@ class Proposta extends CommonDBTM
                 'name'                   => $bloco['name'],
                 'conteudo'               => $bloco['conteudo'],
                 'ordem'                  => $bloco['ordem'],
+                'depois_dos_valores'     => (int) ($bloco['depois_dos_valores'] ?? 0),
             ]);
         }
 
@@ -1213,6 +1238,8 @@ class Proposta extends CommonDBTM
                 'unitario'    => $moeda((float) $item['valor_unitario']),
                 'desconto'    => (float) $item['desconto_pct'] > 0 ? $numero((float) $item['desconto_pct']) . '%' : null,
                 'subtotal'    => $moeda($subtotal),
+                // Exibição por unidade: o preço de uma unidade já com o desconto (de/por).
+                'final'       => $moeda(Calculo::subtotal(1, $item['valor_unitario'], $item['desconto_pct'])),
                 'percentual'  => $total_tipo > 0 ? round($subtotal / $total_tipo * 100, 2) : 0,
                 'cor'         => $cores[$i % count($cores)],
             ];
@@ -1254,7 +1281,11 @@ class Proposta extends CommonDBTM
                 'cnpj'          => Cnpj::formatar((string) $this->fields['empresa_cnpj']),
             ],
             'blocos'        => array_map(
-                static fn (array $b): array => ['titulo' => (string) $b['name'], 'conteudo' => (string) $b['conteudo']],
+                static fn (array $b): array => [
+                    'titulo'   => (string) $b['name'],
+                    'conteudo' => (string) $b['conteudo'],
+                    'depois'   => !empty($b['depois_dos_valores']),
+                ],
                 PropostaBloco::getBlocosDaProposta($this->getID())
             ),
             'versao'        => (int) $this->fields['versao'],
@@ -1265,6 +1296,7 @@ class Proposta extends CommonDBTM
             'consultor'     => $consultor,
             'aviso_previo'  => (int) $this->fields['aviso_previo_dias'],
             'condicoes'     => (string) $this->fields['condicoes'],
+            'exibicao'      => Calculo::exibicaoValida($this->fields['exibicao'] ?? null),
             'recorrentes'   => $grupos[PropostaItem::TIPO_RECORRENTE],
             'pontuais'      => $grupos[PropostaItem::TIPO_PONTUAL],
             'total_mensal'  => $moeda($totais[PropostaItem::TIPO_RECORRENTE]),

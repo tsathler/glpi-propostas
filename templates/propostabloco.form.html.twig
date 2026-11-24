@@ -9,6 +9,7 @@
    {{ fields.hiddenField('plugin_propostas_propostas_id', item.fields['plugin_propostas_propostas_id']) }}
    {{ fields.htmlField('', '<a href="' ~ proposta.getLinkURL() ~ '">' ~ (proposta.getNumero() ~ ' · ' ~ proposta.fields['name'])|e ~ '</a>', __('Proposta', 'propostas')) }}
    {{ fields.numberField('ordem', item.fields['ordem'], __('Ordem', 'propostas'), {min: 0}) }}
+   {{ fields.dropdownYesNo('depois_dos_valores', item.fields['depois_dos_valores'] ?? 0, __('Mostrar depois dos valores', 'propostas')) }}
    {{ fields.textareaField('conteudo', item.fields['conteudo'], __('Texto', 'propostas'), {
       enable_richtext: true,
       full_width: true

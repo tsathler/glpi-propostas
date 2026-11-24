@@ -49,6 +49,10 @@
       </div>
    {% endif %}
 
+   {% set por_unidade = p.exibicao == 'unidade' %}
+
+   {# Por unidade, os preços são de coisas diferentes (por pessoa, por mês...): não há total a somar. #}
+   {% if not por_unidade %}
    <div class="cards{{ (p.recorrentes and p.pontuais) ? '' : ' um' }}">
       {% if p.recorrentes %}
          <div class="card forte">
@@ -65,15 +69,44 @@
          </div>
       {% endif %}
    </div>
+   {% endif %}
 
-   {% for b in p.blocos %}
+   {# Blocos marcados "depois dos valores" (agradecimento, assinatura...) vão para o fim da página. #}
+   {% for b in p.blocos|filter(b => not b.depois) %}
       <section class="bloco">
          <h2>{{ b.titulo }}</h2>
          {% if b.conteudo %}<div class="card texto">{{ b.conteudo|safe_html }}</div>{% endif %}
       </section>
    {% endfor %}
 
-   {% if p.recorrentes %}
+   {% if por_unidade and (p.recorrentes or p.pontuais) %}
+      <section>
+         <h2>Investimento</h2>
+         <div class="card">
+            {% for i in p.recorrentes|merge(p.pontuais) %}
+               {% set mensal = loop.index0 < p.recorrentes|length %}
+               <div class="linha">
+                  <div class="nome">
+                     <span class="ponto" style="background: {{ i.cor }};"></span>
+                     <div>
+                        {{ i.nome }}
+                        <span class="detalhe">
+                           {{ mensal ? 'Valor mensal' : 'Pagamento único' }}
+                           {% if i.desconto %}<span class="desconto">· desconto de {{ i.desconto }}</span>{% endif %}
+                        </span>
+                     </div>
+                  </div>
+                  <div class="sub">
+                     {% if i.desconto %}<span class="de">de <s>{{ i.unitario }}</s> por</span>{% endif %}
+                     {{ i.final }}{% if mensal %} <small>/mês</small>{% endif %}
+                  </div>
+               </div>
+            {% endfor %}
+         </div>
+      </section>
+   {% endif %}
+
+   {% if p.recorrentes and not por_unidade %}
       <section>
          <span class="chip">Recorrente</span>
          <h2>O que está incluído por mês</h2>
@@ -103,7 +136,7 @@
       </section>
    {% endif %}
 
-   {% if p.pontuais %}
+   {% if p.pontuais and not por_unidade %}
       <section>
          <span class="chip">Pontual</span>
          <h2>Implantação</h2>
@@ -132,7 +165,6 @@
       <h2>Condições comerciais</h2>
       <div class="card">
          <div class="fixos">
-            <div><span class="k">Aviso prévio</span><br><span class="v">{{ p.aviso_previo }} dias</span></div>
             <div><span class="k">Validade da proposta</span><br><span class="v">{{ p.validade_dias }} dias</span></div>
             <div><span class="k">Emissão</span><br><span class="v">{{ p.emissao }}</span></div>
             {% if p.consultor %}
@@ -143,10 +175,18 @@
             <div class="condicoes">{{ p.condicoes|safe_html }}</div>
          {% endif %}
       </div>
-      <div class="acoes">
-         <button type="button" class="botao" onclick="window.print()">Imprimir / salvar em PDF</button>
-      </div>
    </section>
+
+   {% for b in p.blocos|filter(b => b.depois) %}
+      <section class="bloco">
+         <h2>{{ b.titulo }}</h2>
+         {% if b.conteudo %}<div class="card texto">{{ b.conteudo|safe_html }}</div>{% endif %}
+      </section>
+   {% endfor %}
+
+   <div class="acoes">
+      <button type="button" class="botao" onclick="window.print()">Imprimir / salvar em PDF</button>
+   </div>
 
    {% if p.pode_responder %}
       <section class="decisao" id="responder">

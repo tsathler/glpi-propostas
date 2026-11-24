@@ -18,8 +18,156 @@
       {{ fields.dropdownField('GlpiPlugin\\Propostas\\Modelo', 'plugin_propostas_modelos_id', 0, __('Modelo de proposta', 'propostas'), {
          condition: {'is_active': 1},
          entity: item.fields['entities_id'],
-         helper: __('Validade, aviso prévio, condições, itens e blocos de texto do modelo são copiados para a proposta. O modelo não pode ser trocado depois.', 'propostas')
+         helper: __('Validade, condições, itens e blocos de texto do modelo são copiados para a proposta. O modelo não pode ser trocado depois.', 'propostas')
       }) }}
+
+      {# Ao escolher o modelo: o valor de cada item (editável), o desconto (%) e a prévia do valor final. #}
+      <div class="col-12 mb-3 d-none" id="propostas-modelo-campos" aria-live="polite">
+         <div class="card">
+            <div class="card-header py-2">
+               <h4 class="card-title mb-0"><i class="ti ti-receipt"></i> {{ __('Valores desta proposta', 'propostas') }}</h4>
+               <span class="text-muted small ms-auto">{{ __('Vêm do modelo. Ajuste se precisar.', 'propostas') }}</span>
+            </div>
+            <div class="table-responsive">
+               <table class="table table-vcenter card-table mb-0">
+                  <thead>
+                     <tr>
+                        <th>{{ __('Item', 'propostas') }}</th>
+                        <th class="text-end" style="width: 190px;">{{ __('Valor', 'propostas') }}</th>
+                        <th class="text-end" style="width: 150px;">{{ __('Valor final', 'propostas') }}</th>
+                     </tr>
+                  </thead>
+                  <tbody id="propostas-modelo-itens"></tbody>
+               </table>
+            </div>
+            <div class="card-footer py-2 d-flex flex-wrap align-items-center gap-3">
+               <label class="form-check form-switch mb-0">
+                  <input class="form-check-input" type="checkbox" name="_aplicar_desconto" value="1" id="propostas-aplicar-desconto">
+                  <span class="form-check-label">{{ __('Aplicar desconto a todos os itens', 'propostas') }}</span>
+               </label>
+               <div class="input-group input-group-sm" style="width: 110px;">
+                  <input type="number" class="form-control text-end" name="_desconto_pct" id="propostas-desconto-pct"
+                         min="0" max="100" step="0.01" aria-label="{{ __('Desconto (%)', 'propostas') }}" disabled>
+                  <span class="input-group-text">%</span>
+               </div>
+               <span class="text-muted small" id="propostas-desconto-dica"></span>
+            </div>
+            <div class="form-text px-3 pb-2 text-danger" id="propostas-modelo-msg"></div>
+         </div>
+      </div>
+      <script>
+         (function () {
+            const url = {{ modelo_url|json_encode|raw }};
+            const caixa = document.getElementById('propostas-modelo-campos');
+            const lista = document.getElementById('propostas-modelo-itens');
+            const aplicar = document.getElementById('propostas-aplicar-desconto');
+            const pct = document.getElementById('propostas-desconto-pct');
+            const dica = document.getElementById('propostas-desconto-dica');
+            const msg = document.getElementById('propostas-modelo-msg');
+            const moeda = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'});
+            const textos = {
+               mensal: {{ __('Mensal', 'propostas')|json_encode|raw }},
+               unico: {{ __('Pagamento único', 'propostas')|json_encode|raw }},
+               sugerido: {{ __('Sugerido pelo modelo: {pct}%', 'propostas')|json_encode|raw }},
+               vazio: {{ __('Este modelo não tem itens com valor.', 'propostas')|json_encode|raw }},
+               erro: {{ __('Não foi possível carregar os itens do modelo.', 'propostas')|json_encode|raw }}
+            };
+
+            function percentual() {
+               const v = parseFloat(pct.value);
+               return aplicar.checked && v > 0 ? Math.min(v, 100) : 0;
+            }
+
+            // Mostra o valor de cada item já com o desconto, como o cliente vai ver.
+            function atualizar() {
+               pct.disabled = !aplicar.checked;
+               const p = percentual();
+               lista.querySelectorAll('tr').forEach(function (tr) {
+                  const valor = parseFloat(tr.querySelector('input').value) || 0;
+                  const final = Math.round(valor * (1 - p / 100) * 100) / 100;
+                  const celula = tr.querySelector('.propostas-final');
+                  celula.textContent = moeda.format(final);
+                  celula.classList.toggle('text-success', p > 0);
+                  celula.classList.toggle('text-muted', p === 0);
+               });
+            }
+
+            function limpar() {
+               lista.replaceChildren();
+               aplicar.checked = false;
+               pct.value = '';
+               dica.textContent = '';
+               msg.textContent = '';
+               atualizar();
+            }
+
+            function linha(item) {
+               const tr = document.createElement('tr');
+
+               const nome = document.createElement('td');
+               const rotulo = document.createElement('label');
+               rotulo.htmlFor = 'propostas-valor-' + item.id;
+               rotulo.className = 'mb-0';
+               rotulo.textContent = item.nome;
+               const tipo = document.createElement('span');
+               tipo.className = 'badge ms-2 ' + (item.tipo === 'pontual' ? 'bg-secondary-lt' : 'bg-blue-lt');
+               tipo.textContent = item.tipo === 'pontual' ? textos.unico : textos.mensal;
+               nome.append(rotulo, tipo);
+
+               const valor = document.createElement('td');
+               const grupo = document.createElement('div');
+               grupo.className = 'input-group input-group-sm';
+               const rs = document.createElement('span');
+               rs.className = 'input-group-text';
+               rs.textContent = 'R$';
+               const campo = document.createElement('input');
+               campo.type = 'number';
+               campo.step = '0.01';
+               campo.min = '0';
+               campo.className = 'form-control text-end';
+               campo.id = 'propostas-valor-' + item.id;
+               campo.name = '_modelo_valores[' + item.id + ']';
+               campo.value = Number(item.valor).toFixed(2);
+               campo.addEventListener('input', atualizar);
+               grupo.append(rs, campo);
+               valor.append(grupo);
+
+               const final = document.createElement('td');
+               final.className = 'text-end fw-bold propostas-final';
+
+               tr.append(nome, valor, final);
+               return tr;
+            }
+
+            async function carregar(id) {
+               limpar();
+               if (!id || id === '0') { caixa.classList.add('d-none'); return; }
+               caixa.classList.remove('d-none');
+               try {
+                  const resposta = await fetch(url + '?id=' + encodeURIComponent(id), {credentials: 'same-origin'});
+                  const dados = await resposta.json();
+                  if (!dados.ok) { msg.textContent = dados.erro || textos.erro; return; }
+                  dados.itens.forEach(function (item) { lista.append(linha(item)); });
+                  if (dados.itens.length === 0) { msg.textContent = textos.vazio; }
+                  if (dados.desconto_especial > 0) {
+                     pct.value = dados.desconto_especial;
+                     dica.textContent = textos.sugerido.replace('{pct}', String(dados.desconto_especial).replace('.', ','));
+                  }
+                  atualizar();
+               } catch (e) {
+                  msg.textContent = textos.erro;
+               }
+            }
+
+            aplicar.addEventListener('change', atualizar);
+            pct.addEventListener('input', atualizar);
+
+            // O campo do modelo é um select2: a troca chega como evento "change" do jQuery.
+            $(document).on('change', 'select[name="plugin_propostas_modelos_id"]', function () {
+               carregar(this.value);
+            });
+         })();
+      </script>
    {% elseif modelo %}
       {{ fields.htmlField('', '<a href="' ~ modelo.getLinkURL() ~ '">' ~ modelo.fields['name']|e ~ '</a>', __('Modelo de origem', 'propostas')) }}
    {% endif %}
@@ -108,7 +256,10 @@
 
    {{ fields.numberField('validade_dias', item.fields['validade_dias'], __('Validade (dias)', 'propostas'), travado|merge({min: 1})) }}
 
-   {{ fields.numberField('aviso_previo_dias', item.fields['aviso_previo_dias'], __('Aviso prévio (dias)', 'propostas'), travado|merge({min: 0})) }}
+   {# Na criação, vem do modelo. Depois, pode ser ajustada enquanto a proposta é rascunho. #}
+   {% if not item.isNewItem() %}
+      {{ fields.dropdownArrayField('exibicao', item.fields['exibicao'] ?? 'total', exibicoes, __('Valores na página do cliente', 'propostas'), travado) }}
+   {% endif %}
 
    {% if totais %}
       {{ fields.htmlField('', 'R$ ' ~ totais['recorrente'] ~ ' / ' ~ __('mês', 'propostas'), __('Investimento mensal', 'propostas')) }}

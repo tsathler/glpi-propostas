@@ -6,7 +6,10 @@
 {% import 'components/form/fields_macros.html.twig' as fields %}
 
 {% block more_fields %}
-   {{ fields.dropdownYesNo('is_active', item.fields['is_active'], __('Active')) }}
+   {# "Ativo" já vem do formulário genérico do GLPI (o campo existe na tabela). #}
+   {{ fields.dropdownYesNo('depois_dos_valores', item.fields['depois_dos_valores'] ?? 0, __('Mostrar depois dos valores', 'propostas'), {
+      helper: __('Sim: na página do cliente, o bloco aparece no fim, depois do investimento e das condições comerciais (ex.: agradecimento, assinatura, contato).', 'propostas')
+   }) }}
 
    {{ fields.textareaField('conteudo', item.fields['conteudo'], __('Texto', 'propostas'), {
       enable_richtext: true,

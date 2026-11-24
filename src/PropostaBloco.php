@@ -91,6 +91,7 @@ class PropostaBloco extends CommonDBChild
             }
             $input['name']     = $bloco->fields['name'];
             $input['conteudo'] = $bloco->fields['conteudo'];
+            $input['depois_dos_valores'] = (int) ($bloco->fields['depois_dos_valores'] ?? 0);
         }
         if (trim((string) ($input['name'] ?? '')) === '') {
             Session::addMessageAfterRedirect(htmlescape(__('Informe o título do bloco.', 'propostas')), false, ERROR);
