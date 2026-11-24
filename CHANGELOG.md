@@ -5,6 +5,8 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-24
+
 ### Added
 
 - **Chamado automático:** ao gerar o link de uma proposta sem chamado vinculado, o plugin abre um chamado (requisição) na entidade da proposta, com o consultor como requerente e técnico, e grava o vínculo. Se a abertura falhar, o link é gerado mesmo assim e o consultor recebe um aviso.
@@ -95,6 +97,7 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/tsathler/glpi-propostas/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/tsathler/glpi-propostas/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/tsathler/glpi-propostas/releases/tag/v1.0.0
