@@ -20,7 +20,7 @@ Depois de instalar, os perfis que administram a configuração recebem acesso to
 
 Ao atualizar, rode também `sudo -u www-data php ../bin/console cache:clear`, para o GLPI carregar a rota pública do plugin.
 
-## O que já funciona (0.3.0)
+## O que já funciona (0.4.0)
 
 - Menu **Ferramentas > Propostas**, com lista e busca
 - Cadastro da proposta: título, solicitante, consultor, chamado vinculado, emissão, validade, aviso prévio e condições comerciais
@@ -30,6 +30,8 @@ Ao atualizar, rode também `sudo -u www-data php ../bin/console cache:clear`, pa
 - O cliente **aceita** (nome, CPF e declaração, com código de verificação dos valores) ou envia **dúvidas** pela própria página; as respostas viram acompanhamento privado no chamado vinculado
 - Abas **Respostas do cliente** e **Acessos ao link**
 - Notificações para o consultor: proposta aberta, aceita e com dúvida (exigem as notificações por e-mail ativas no GLPI)
+- **Duplicar** uma proposta como novo rascunho
+- Ação automática diária **expirar**, que marca como *Expirada* a proposta enviada cujo link venceu (roda pelo cron do GLPI)
 - Histórico de alterações
 
 ## Expor o link para fora da rede

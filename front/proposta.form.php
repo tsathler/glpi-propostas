@@ -19,6 +19,14 @@ if (isset($_POST['add'])) {
         Html::redirect($proposta->getLinkURL());
     }
     Html::back();
+} elseif (isset($_POST['duplicar'])) {
+    $proposta->check($_POST['id'], READ);
+    Session::checkRight(Proposta::$rightname, CREATE);
+    $id = $proposta->duplicar();
+    if ($id !== false) {
+        Html::redirect(Proposta::getFormURLWithID($id));
+    }
+    Html::back();
 } elseif (isset($_POST['gerar_link']) || isset($_POST['reabrir']) || isset($_POST['cancelar'])) {
     $proposta->check($_POST['id'], UPDATE);
     match (true) {
