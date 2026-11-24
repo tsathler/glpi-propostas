@@ -5,6 +5,10 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-24
+
+Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abaixo), que não tiveram release própria.
+
 ### Added
 
 - Ação automática diária **expirar** (Configurar > Ações automáticas): marca como *Expirada* as propostas *Enviada*, *Visualizada* ou *Com dúvida* cujo link já venceu.
@@ -15,6 +19,7 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 ### Changed
 
 - Cálculos e CPF saíram das classes ligadas ao GLPI para `Calculo` e `Cpf`, testáveis sem o GLPI. O hash dos valores aceitos não mudou (aceites antigos continuam conferindo). Os totais agora são arredondados a 2 casas depois da soma.
+- README com instalação pela release, funcionalidades, segurança do link público e exemplo de Nginx para expor só as rotas públicas.
 
 ## [0.3.0]
 
@@ -61,3 +66,6 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - Proposta nova vinha com validade 1 e aviso prévio 0. Agora vem com versão 1, validade 15 e aviso prévio 60.
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
+
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/tsathler/glpi-propostas/releases/tag/v1.0.0

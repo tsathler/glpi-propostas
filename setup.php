@@ -12,7 +12,7 @@ use GlpiPlugin\Propostas\Acesso;
 use GlpiPlugin\Propostas\PropostaItem;
 use GlpiPlugin\Propostas\Resposta;
 
-define('PLUGIN_PROPOSTAS_VERSION', '0.4.0');
+define('PLUGIN_PROPOSTAS_VERSION', '1.0.0');
 define('PLUGIN_PROPOSTAS_MIN_GLPI', '11.0.0');
 define('PLUGIN_PROPOSTAS_MAX_GLPI', '11.99.99');
 define('PLUGIN_PROPOSTAS_RIGHT', 'plugin_propostas_proposta');
