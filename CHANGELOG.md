@@ -12,6 +12,10 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - Chamado vinculado validado: precisa ser um chamado que o usuário vê, da entidade da proposta (ou de uma entidade acima ou abaixo).
 - Consultor validado: usuário ativo com acesso à entidade da proposta.
 - Modelo e bloco de texto copiados por ID validados: ativos e visíveis na entidade da proposta (ou do modelo).
+- Mudanças de status com a proposta travada no banco (aceite, dúvida, visualização, gerar link, reabrir, cancelar, expiração): respostas simultâneas não geram aceite duplo, "dúvida" depois do aceite, aceite numa versão reaberta nem dois chamados por duplo clique.
+- Limite de envios: grava antes de contar (envios simultâneos não furam o limite), conta o IPv6 pela rede /64 e não conta envio recusado pela validação.
+- No máximo 5 dúvidas por proposta a cada 24 horas.
+- O registro de acessos ao link grava no máximo uma linha por proposta, versão e IP a cada 10 minutos.
 
 ## [1.2.0] - 2026-11-24
 

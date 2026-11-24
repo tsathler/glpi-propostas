@@ -97,6 +97,33 @@ class Proposta extends CommonDBTM
         }
     }
 
+    /**
+     * Roda $acao com a linha da proposta travada (SELECT ... FOR UPDATE) e os campos relidos do banco.
+     * Duas requisições ao mesmo tempo (aceite e dúvida, aceite e reabrir, duplo clique em gerar link)
+     * passam uma depois da outra, e a segunda já vê o status que a primeira gravou.
+     *
+     * @template T
+     * @param callable(): T $acao
+     * @return T
+     */
+    private function comTrava(callable $acao): mixed
+    {
+        global $DB;
+
+        $DB->beginTransaction();
+        try {
+            $DB->doQuery(sprintf('SELECT `id` FROM `%s` WHERE `id` = %d FOR UPDATE', self::getTable(), $this->getID()));
+            $this->getFromDB($this->getID());
+            $resultado = $acao();
+            $DB->commit();
+
+            return $resultado;
+        } catch (\Throwable $e) {
+            $DB->rollBack();
+            throw $e;
+        }
+    }
+
     /** Campos que só as ações do plugin alteram (nunca o formulário). */
     private const CAMPOS_INTERNOS = ['status', 'versao', 'token_hash', 'token_cifrado', 'token_expira'];
 
@@ -386,7 +413,9 @@ class Proposta extends CommonDBTM
             $proposta = new self();
             if (
                 $proposta->getFromDB((int) $row['id'])
-                && $proposta->atualizarInterno(['id' => $proposta->getID(), 'status' => self::STATUS_EXPIRADA])
+                && $proposta->comTrava(static fn (): bool => in_array($proposta->fields['status'], self::STATUS_EM_ABERTO, true)
+                    && $proposta->isLinkExpirado()
+                    && $proposta->atualizarInterno(['id' => $proposta->getID(), 'status' => self::STATUS_EXPIRADA]))
             ) {
                 $expiradas++;
                 $proposta->adicionarAcompanhamento(sprintf(
@@ -469,6 +498,11 @@ class Proposta extends CommonDBTM
      * Um link anterior deixa de valer.
      */
     public function gerarLink(): bool
+    {
+        return $this->comTrava(fn (): bool => $this->gerarLinkTravado());
+    }
+
+    private function gerarLinkTravado(): bool
     {
         if (!$this->podeGerarLink()) {
             return false;
@@ -567,6 +601,11 @@ class Proposta extends CommonDBTM
      */
     public function reabrir(): bool
     {
+        return $this->comTrava(fn (): bool => $this->reabrirTravado());
+    }
+
+    private function reabrirTravado(): bool
+    {
         if (!$this->podeReabrir()) {
             return false;
         }
@@ -590,6 +629,11 @@ class Proposta extends CommonDBTM
     }
 
     public function cancelar(): bool
+    {
+        return $this->comTrava(fn (): bool => $this->cancelarTravado());
+    }
+
+    private function cancelarTravado(): bool
     {
         if (!$this->podeCancelar()) {
             return false;
@@ -692,11 +736,13 @@ class Proposta extends CommonDBTM
         if ($this->fields['status'] !== self::STATUS_ENVIADA) {
             return;
         }
-        $this->atualizarInterno([
-            'id'            => $this->getID(),
-            'status'        => self::STATUS_VISUALIZADA,
-        ]);
-        $this->notificar('aberta');
+        $token_hash = (string) $this->fields['token_hash'];
+        $mudou = $this->comTrava(fn (): bool => $this->fields['status'] === self::STATUS_ENVIADA
+            && (string) $this->fields['token_hash'] === $token_hash
+            && $this->atualizarInterno(['id' => $this->getID(), 'status' => self::STATUS_VISUALIZADA]));
+        if ($mudou) {
+            $this->notificar('aberta');
+        }
     }
 
     /* ------------------------------------------------------------------
@@ -750,6 +796,19 @@ class Proposta extends CommonDBTM
         );
     }
 
+    /** Dúvidas aceitas por proposta a cada 24 horas (evita encher o chamado e o e-mail do consultor). */
+    private const DUVIDAS_POR_DIA = 5;
+
+    /**
+     * Ainda é a mesma versão/link que o cliente abriu e ela ainda aceita resposta.
+     */
+    private function mesmaVersaoRespondivel(string $token_hash, int $versao): bool
+    {
+        return $this->podeResponder()
+            && (string) $this->fields['token_hash'] === $token_hash
+            && (int) $this->fields['versao'] === $versao;
+    }
+
     /**
      * @return list<string> mensagens de erro (vazio = aceite registrado)
      */
@@ -777,26 +836,39 @@ class Proposta extends CommonDBTM
             return $erros;
         }
 
-        $digitos = Cpf::somenteDigitos($cpf);
-        $hash    = $this->calcularHashValores(Calculo::HASH_FORMATO_ATUAL, $cargo);
-        $id = Resposta::registrar([
-            'plugin_propostas_propostas_id' => $this->getID(),
-            'tipo'                          => Resposta::TIPO_ACEITE,
-            'versao'                        => (int) $this->fields['versao'],
-            'nome'                          => $nome,
-            'cpf_cifrado'                   => (new \GLPIKey())->encrypt($digitos),
-            'cpf_mascarado'                 => Cpf::mascarar($digitos),
-            'cargo'                         => $cargo,
-            'hash_valores'                  => $hash,
-            'hash_formato'                  => Calculo::HASH_FORMATO_ATUAL,
-            'ip'                            => mb_substr($ip, 0, 45),
-            'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
-        ]);
+        $digitos    = Cpf::somenteDigitos($cpf);
+        $token_hash = (string) $this->fields['token_hash'];
+        $versao     = (int) $this->fields['versao'];
+        $registro   = $this->comTrava(function () use ($token_hash, $versao, $nome, $cargo, $digitos, $ip, $user_agent): ?array {
+            // Relido sob trava: outra resposta, reabrir ou cancelar podem ter mudado a proposta.
+            if (!$this->mesmaVersaoRespondivel($token_hash, $versao)) {
+                return null;
+            }
+            $hash = $this->calcularHashValores(Calculo::HASH_FORMATO_ATUAL, $cargo);
+            $id = Resposta::registrar([
+                'plugin_propostas_propostas_id' => $this->getID(),
+                'tipo'                          => Resposta::TIPO_ACEITE,
+                'versao'                        => (int) $this->fields['versao'],
+                'nome'                          => $nome,
+                'cpf_cifrado'                   => (new \GLPIKey())->encrypt($digitos),
+                'cpf_mascarado'                 => Cpf::mascarar($digitos),
+                'cargo'                         => $cargo,
+                'hash_valores'                  => $hash,
+                'hash_formato'                  => Calculo::HASH_FORMATO_ATUAL,
+                'ip'                            => mb_substr($ip, 0, 45),
+                'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
+            ]);
+            $this->atualizarInterno([
+                'id'            => $this->getID(),
+                'status'        => self::STATUS_ACEITA,
+            ]);
 
-        $this->atualizarInterno([
-            'id'            => $this->getID(),
-            'status'        => self::STATUS_ACEITA,
-        ]);
+            return ['id' => $id, 'hash' => $hash];
+        });
+        if ($registro === null) {
+            return ['Esta proposta não pode mais ser aceita.'];
+        }
+        ['id' => $id, 'hash' => $hash] = $registro;
 
         $codigo = Calculo::codigo($hash);
         $this->adicionarAcompanhamento(sprintf(
@@ -839,20 +911,38 @@ class Proposta extends CommonDBTM
             return $erros;
         }
 
-        $id = Resposta::registrar([
-            'plugin_propostas_propostas_id' => $this->getID(),
-            'tipo'                          => Resposta::TIPO_DUVIDA,
-            'versao'                        => (int) $this->fields['versao'],
-            'nome'                          => $nome,
-            'mensagem'                      => $mensagem,
-            'ip'                            => mb_substr($ip, 0, 45),
-            'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
-        ]);
+        $token_hash = (string) $this->fields['token_hash'];
+        $versao     = (int) $this->fields['versao'];
+        $id = $this->comTrava(function () use ($token_hash, $versao, $nome, $mensagem, $ip, $user_agent): int|string {
+            if (!$this->mesmaVersaoRespondivel($token_hash, $versao)) {
+                return 'Esta proposta não aceita mais dúvidas por aqui. Fale com o seu consultor.';
+            }
+            if (countElementsInTable(Resposta::TABELA, [
+                'plugin_propostas_propostas_id' => $this->getID(),
+                'tipo'                          => Resposta::TIPO_DUVIDA,
+                'date_creation'                 => ['>=', date('Y-m-d H:i:s', time() - DAY_TIMESTAMP)],
+            ]) >= self::DUVIDAS_POR_DIA) {
+                return 'Esta proposta já recebeu muitas dúvidas hoje. Fale direto com o seu consultor.';
+            }
+            $id = Resposta::registrar([
+                'plugin_propostas_propostas_id' => $this->getID(),
+                'tipo'                          => Resposta::TIPO_DUVIDA,
+                'versao'                        => (int) $this->fields['versao'],
+                'nome'                          => $nome,
+                'mensagem'                      => $mensagem,
+                'ip'                            => mb_substr($ip, 0, 45),
+                'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
+            ]);
+            $this->atualizarInterno([
+                'id'            => $this->getID(),
+                'status'        => self::STATUS_DUVIDA,
+            ]);
 
-        $this->atualizarInterno([
-            'id'            => $this->getID(),
-            'status'        => self::STATUS_DUVIDA,
-        ]);
+            return $id;
+        });
+        if (is_string($id)) {
+            return [$id];
+        }
 
         $this->adicionarAcompanhamento(sprintf(
             '<p><strong>Dúvida do cliente sobre a proposta nº %s (versão %d).</strong></p><p>De: %s</p><p>%s</p>',
