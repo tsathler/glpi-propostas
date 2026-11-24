@@ -72,8 +72,15 @@ class PropostaBloco extends CommonDBChild
         // "Da biblioteca": copia título e texto do bloco escolhido.
         $blocos_id = (int) ($input['_plugin_propostas_blocos_id'] ?? 0);
         if ($blocos_id > 0) {
-            $bloco = new Bloco();
-            if (!$bloco->getFromDB($blocos_id)) {
+            $bloco    = new Bloco();
+            $proposta = new Proposta();
+            if (
+                !$bloco->getFromDB($blocos_id)
+                || !$bloco->fields['is_active']
+                || !$proposta->getFromDB((int) ($input[self::$items_id] ?? 0))
+                || !Proposta::visivelNaEntidade($bloco, (int) $proposta->fields['entities_id'])
+            ) {
+                Session::addMessageAfterRedirect(htmlescape(__('Bloco de texto inválido ou inativo.', 'propostas')), false, ERROR);
                 return false;
             }
             $input['name']     = $bloco->fields['name'];

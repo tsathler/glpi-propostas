@@ -5,6 +5,14 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+### Security
+
+- O campo interno que libera as ações do plugin (gerar link, reabrir, cancelar, respostas, expiração) podia ser enviado no formulário de edição: quem podia editar uma proposta conseguia mudar status, versão, link e condições de uma proposta travada ou aceita. Agora o sinal é só interno.
+- O link público (que permite aceitar ou mandar dúvida como cliente) aparece só para quem pode editar a proposta; quem só lê vê que o link foi enviado e a validade.
+- Chamado vinculado validado: precisa ser um chamado que o usuário vê, da entidade da proposta (ou de uma entidade acima ou abaixo).
+- Consultor validado: usuário ativo com acesso à entidade da proposta.
+- Modelo e bloco de texto copiados por ID validados: ativos e visíveis na entidade da proposta (ou do modelo).
+
 ## [1.2.0] - 2026-11-24
 
 ### Added

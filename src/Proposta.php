@@ -79,6 +79,24 @@ class Proposta extends CommonDBTM
         $this->fields['status']             = self::STATUS_RASCUNHO;
     }
 
+    /** Ligado só por atualizarInterno(): libera os campos internos e a proposta travada. */
+    private bool $acao_interna = false;
+
+    /**
+     * Update feito pelas ações do próprio plugin (link, reabrir, cancelar, respostas, cron).
+     *
+     * @param array<string, mixed> $input
+     */
+    private function atualizarInterno(array $input): bool
+    {
+        $this->acao_interna = true;
+        try {
+            return $this->update($input);
+        } finally {
+            $this->acao_interna = false;
+        }
+    }
+
     /** Campos que só as ações do plugin alteram (nunca o formulário). */
     private const CAMPOS_INTERNOS = ['status', 'versao', 'token_hash', 'token_cifrado', 'token_expira'];
 
@@ -100,11 +118,21 @@ class Proposta extends CommonDBTM
         $modelos_id = (int) ($input['plugin_propostas_modelos_id'] ?? 0);
         if ($modelos_id > 0 && empty($input['_sem_copiar_modelo'])) {
             $modelo = new Modelo();
-            if (!$modelo->getFromDB($modelos_id) || !$modelo->fields['is_active']) {
+            $entidade = (int) ($input['entities_id'] ?? Session::getActiveEntity());
+            if (
+                !$modelo->getFromDB($modelos_id)
+                || !$modelo->fields['is_active']
+                || !self::visivelNaEntidade($modelo, $entidade)
+            ) {
                 Session::addMessageAfterRedirect(htmlescape(__('Modelo de proposta inválido ou inativo.', 'propostas')), false, ERROR);
                 return false;
             }
             $input = $modelo->aplicarNoInput($input);
+        }
+
+        $entidade = (int) ($input['entities_id'] ?? Session::getActiveEntity());
+        if (!$this->validarVinculos($input, $entidade)) {
+            return false;
         }
 
         return $this->validarEmpresa($input);
@@ -147,9 +175,9 @@ class Proposta extends CommonDBTM
 
     public function prepareInputForUpdate($input)
     {
-        // Ações do próprio plugin (gerar link, reabrir, cancelar, visualização) passam direto.
-        if (!empty($input['_acao_interna'])) {
-            unset($input['_acao_interna']);
+        // Ações do próprio plugin (gerar link, reabrir, cancelar, visualização...) passam direto.
+        // O sinal é uma propriedade do objeto, nunca um campo vindo da requisição.
+        if ($this->acao_interna) {
             return $input;
         }
 
@@ -181,7 +209,67 @@ class Proposta extends CommonDBTM
             return $input;
         }
 
+        if (!$this->validarVinculos($input, (int) ($input['entities_id'] ?? $this->fields['entities_id']))) {
+            return false;
+        }
+
         return $this->validarEmpresa($input);
+    }
+
+    /**
+     * Item de entidade (modelo, bloco) que pode ser usado numa proposta desta entidade:
+     * da mesma entidade, ou recursivo de uma entidade acima.
+     */
+    public static function visivelNaEntidade(\CommonDBTM $item, int $entidade): bool
+    {
+        $entidade_item = (int) $item->fields['entities_id'];
+        if ($entidade_item === $entidade) {
+            return true;
+        }
+
+        return !empty($item->fields['is_recursive'])
+            && in_array($entidade_item, getAncestorsOf('glpi_entities', $entidade), false);
+    }
+
+    /**
+     * Chamado vinculado e consultor vindos do formulário (ou de ação em massa). Só valida o que mudou.
+     *
+     * @param array<string, mixed> $input
+     */
+    private function validarVinculos(array $input, int $entidade): bool
+    {
+        $tickets_id = (int) ($input['tickets_id'] ?? 0);
+        if ($tickets_id > 0 && $tickets_id !== (int) ($this->fields['tickets_id'] ?? 0)) {
+            $ticket = new \Ticket();
+            $mesmo_ramo = array_merge(
+                getAncestorsOf('glpi_entities', $entidade),
+                getSonsOf('glpi_entities', $entidade)
+            );
+            if (
+                !$ticket->getFromDB($tickets_id)
+                || !$ticket->can($tickets_id, READ)
+                || !in_array((int) $ticket->fields['entities_id'], $mesmo_ramo, false)
+            ) {
+                Session::addMessageAfterRedirect(htmlescape(__('Chamado vinculado inválido: escolha um chamado que você vê, da entidade da proposta.', 'propostas')), false, ERROR);
+                return false;
+            }
+        }
+
+        $users_id = (int) ($input['users_id_consultor'] ?? 0);
+        if ($users_id > 0 && $users_id !== (int) ($this->fields['users_id_consultor'] ?? 0)) {
+            $user = new \User();
+            if (
+                !$user->getFromDB($users_id)
+                || !$user->fields['is_active']
+                || $user->fields['is_deleted']
+                || !in_array($entidade, \Profile_User::getUserEntities($users_id, true), false)
+            ) {
+                Session::addMessageAfterRedirect(htmlescape(__('Consultor inválido: escolha um usuário ativo com acesso à entidade da proposta.', 'propostas')), false, ERROR);
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -195,6 +283,7 @@ class Proposta extends CommonDBTM
     public function showForm($ID, array $options = []): bool
     {
         $this->initForm($ID, $options);
+        $pode_editar = !$this->isNewItem() && $this->can($this->getID(), UPDATE);
 
         TemplateRenderer::getInstance()->display('@propostas/proposta.form.html.twig', [
             'item'          => $this,
@@ -203,7 +292,9 @@ class Proposta extends CommonDBTM
             'status_label'  => self::getStatusList()[$this->fields['status']] ?? $this->fields['status'],
             'editavel'      => $this->isEditavel(),
             'totais'        => $this->isNewItem() ? null : $this->getTotaisFormatados(),
-            'link_publico'  => $this->isNewItem() ? null : $this->getLinkPublico(),
+            // O link dá acesso de cliente (aceitar, mandar dúvida): só quem pode editar a proposta o vê.
+            'link_publico'  => !$this->isNewItem() && $pode_editar ? $this->getLinkPublico() : null,
+            'link_oculto'   => !$this->isNewItem() && !$pode_editar && !empty($this->fields['token_cifrado']),
             'link_expira'   => $this->fields['token_expira'] ?? null,
             'link_expirado' => $this->isLinkExpirado(),
             'pode_gerar'    => $this->podeGerarLink(),
@@ -295,7 +386,7 @@ class Proposta extends CommonDBTM
             $proposta = new self();
             if (
                 $proposta->getFromDB((int) $row['id'])
-                && $proposta->update(['id' => $proposta->getID(), '_acao_interna' => true, 'status' => self::STATUS_EXPIRADA])
+                && $proposta->atualizarInterno(['id' => $proposta->getID(), 'status' => self::STATUS_EXPIRADA])
             ) {
                 $expiradas++;
                 $proposta->adicionarAcompanhamento(sprintf(
@@ -399,9 +490,8 @@ class Proposta extends CommonDBTM
 
         $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
 
-        $ok = $this->update([
+        $ok = $this->atualizarInterno([
             'id'             => $this->getID(),
-            '_acao_interna'  => true,
             'status'         => self::STATUS_ENVIADA,
             'token_hash'     => hash('sha256', $token),
             'token_cifrado'  => (new \GLPIKey())->encrypt($token),
@@ -468,7 +558,7 @@ class Proposta extends CommonDBTM
             return;
         }
 
-        $this->update(['id' => $this->getID(), '_acao_interna' => true, 'tickets_id' => $tickets_id]);
+        $this->atualizarInterno(['id' => $this->getID(), 'tickets_id' => $tickets_id]);
         Session::addMessageAfterRedirect(htmlescape(sprintf(__('Chamado %d aberto para esta proposta.', 'propostas'), $tickets_id)));
     }
 
@@ -481,9 +571,8 @@ class Proposta extends CommonDBTM
             return false;
         }
 
-        $ok = $this->update([
+        $ok = $this->atualizarInterno([
             'id'            => $this->getID(),
-            '_acao_interna' => true,
             'status'        => self::STATUS_RASCUNHO,
             'versao'        => (int) $this->fields['versao'] + 1,
             'token_hash'    => 'NULL',
@@ -506,9 +595,8 @@ class Proposta extends CommonDBTM
             return false;
         }
 
-        $ok = $this->update([
+        $ok = $this->atualizarInterno([
             'id'            => $this->getID(),
-            '_acao_interna' => true,
             'status'        => self::STATUS_CANCELADA,
             'token_hash'    => 'NULL',
             'token_cifrado' => 'NULL',
@@ -604,9 +692,8 @@ class Proposta extends CommonDBTM
         if ($this->fields['status'] !== self::STATUS_ENVIADA) {
             return;
         }
-        $this->update([
+        $this->atualizarInterno([
             'id'            => $this->getID(),
-            '_acao_interna' => true,
             'status'        => self::STATUS_VISUALIZADA,
         ]);
         $this->notificar('aberta');
@@ -706,9 +793,8 @@ class Proposta extends CommonDBTM
             'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
         ]);
 
-        $this->update([
+        $this->atualizarInterno([
             'id'            => $this->getID(),
-            '_acao_interna' => true,
             'status'        => self::STATUS_ACEITA,
         ]);
 
@@ -763,9 +849,8 @@ class Proposta extends CommonDBTM
             'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
         ]);
 
-        $this->update([
+        $this->atualizarInterno([
             'id'            => $this->getID(),
-            '_acao_interna' => true,
             'status'        => self::STATUS_DUVIDA,
         ]);
 

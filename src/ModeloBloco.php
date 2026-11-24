@@ -78,6 +78,16 @@ class ModeloBloco extends CommonDBChild
             Session::addMessageAfterRedirect(htmlescape(__('Escolha um bloco de texto.', 'propostas')), false, ERROR);
             return false;
         }
+        $bloco  = new Bloco();
+        $modelo = new Modelo();
+        if (
+            !$bloco->getFromDB((int) $input['plugin_propostas_blocos_id'])
+            || !$modelo->getFromDB((int) ($input[self::$items_id] ?? 0))
+            || !Proposta::visivelNaEntidade($bloco, (int) $modelo->fields['entities_id'])
+        ) {
+            Session::addMessageAfterRedirect(htmlescape(__('Bloco de texto inválido para a entidade do modelo.', 'propostas')), false, ERROR);
+            return false;
+        }
         if (countElementsInTable(self::getTable(), [
             self::$items_id              => (int) ($input[self::$items_id] ?? 0),
             'plugin_propostas_blocos_id' => (int) $input['plugin_propostas_blocos_id'],
