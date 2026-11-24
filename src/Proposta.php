@@ -483,22 +483,7 @@ class Proposta extends CommonDBTM
      */
     public function calcularHashValores(): string
     {
-        $dec = static fn ($v, int $casas): string => number_format((float) $v, $casas, '.', '');
-
-        $itens = [];
-        foreach (PropostaItem::getItensDaProposta($this->getID()) as $item) {
-            $itens[] = [
-                'tipo'           => (string) $item['tipo'],
-                'nome'           => (string) $item['name'],
-                'quantidade'     => $dec($item['quantidade'], 2),
-                'valor_unitario' => $dec($item['valor_unitario'], 4),
-                'desconto_pct'   => $dec($item['desconto_pct'], 2),
-                'subtotal'       => $dec(PropostaItem::calcularSubtotal($item), 2),
-            ];
-        }
-        $totais = $this->getTotais();
-
-        $conteudo = [
+        return Calculo::hashValores([
             'numero'        => $this->getNumero(),
             'versao'        => (int) $this->fields['versao'],
             'titulo'        => (string) $this->fields['name'],
@@ -506,12 +491,7 @@ class Proposta extends CommonDBTM
             'validade_dias' => (int) $this->fields['validade_dias'],
             'aviso_previo'  => (int) $this->fields['aviso_previo_dias'],
             'condicoes'     => (string) $this->fields['condicoes'],
-            'itens'         => $itens,
-            'total_mensal'  => $dec($totais[PropostaItem::TIPO_RECORRENTE], 2),
-            'total_unico'   => $dec($totais[PropostaItem::TIPO_PONTUAL], 2),
-        ];
-
-        return hash('sha256', json_encode($conteudo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        ], PropostaItem::getItensDaProposta($this->getID()));
     }
 
     /**
@@ -527,7 +507,7 @@ class Proposta extends CommonDBTM
         if (!self::isNomeCompleto($nome)) {
             $erros[] = 'Informe o nome completo.';
         }
-        if (!Resposta::validarCpf($cpf)) {
+        if (!Cpf::validar($cpf)) {
             $erros[] = 'CPF inválido.';
         }
         if (!$declaracao) {
@@ -537,7 +517,7 @@ class Proposta extends CommonDBTM
             return $erros;
         }
 
-        $digitos = Resposta::somenteDigitos($cpf);
+        $digitos = Cpf::somenteDigitos($cpf);
         $hash    = $this->calcularHashValores();
         $id = Resposta::registrar([
             'plugin_propostas_propostas_id' => $this->getID(),
@@ -545,7 +525,7 @@ class Proposta extends CommonDBTM
             'versao'                        => (int) $this->fields['versao'],
             'nome'                          => $nome,
             'cpf_cifrado'                   => (new \GLPIKey())->encrypt($digitos),
-            'cpf_mascarado'                 => Resposta::mascararCpf($digitos),
+            'cpf_mascarado'                 => Cpf::mascarar($digitos),
             'hash_valores'                  => $hash,
             'ip'                            => mb_substr($ip, 0, 45),
             'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
@@ -557,13 +537,13 @@ class Proposta extends CommonDBTM
             'status'        => self::STATUS_ACEITA,
         ]);
 
-        $codigo = Resposta::formatarCodigo($hash);
+        $codigo = Calculo::codigo($hash);
         $this->adicionarAcompanhamento(sprintf(
             '<p><strong>Proposta nº %s (versão %d) aceita pelo cliente.</strong></p><p>Nome: %s<br>CPF: %s<br>Código de verificação: %s</p>',
             htmlescape($this->getNumero()),
             (int) $this->fields['versao'],
             htmlescape($nome),
-            htmlescape(Resposta::mascararCpf($digitos)),
+            htmlescape(Cpf::mascarar($digitos)),
             htmlescape($codigo)
         ));
         $this->notificar('aceita', ['resposta_id' => $id, 'nome' => $nome, 'codigo' => $codigo, 'mensagem' => '']);
@@ -722,7 +702,7 @@ class Proposta extends CommonDBTM
                 $aceite = [
                     'nome'   => (string) $row['nome'],
                     'data'   => $quando->format('d/m/Y') . ' às ' . $quando->format('H:i'),
-                    'codigo' => Resposta::formatarCodigo($row['hash_valores']),
+                    'codigo' => Calculo::codigo($row['hash_valores']),
                 ];
             }
         }
@@ -763,12 +743,7 @@ class Proposta extends CommonDBTM
      */
     public function getTotais(): array
     {
-        $totais = [PropostaItem::TIPO_RECORRENTE => 0.0, PropostaItem::TIPO_PONTUAL => 0.0];
-        foreach (PropostaItem::getItensDaProposta($this->getID()) as $item) {
-            $totais[$item['tipo']] = ($totais[$item['tipo']] ?? 0.0) + PropostaItem::calcularSubtotal($item);
-        }
-
-        return $totais;
+        return Calculo::totais(PropostaItem::getItensDaProposta($this->getID()));
     }
 
     /**

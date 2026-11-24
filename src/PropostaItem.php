@@ -23,8 +23,8 @@ class PropostaItem extends CommonDBChild
 
     public $dohistory = true;
 
-    public const TIPO_RECORRENTE = 'recorrente';
-    public const TIPO_PONTUAL    = 'pontual';
+    public const TIPO_RECORRENTE = Calculo::TIPO_RECORRENTE;
+    public const TIPO_PONTUAL    = Calculo::TIPO_PONTUAL;
 
     public static function getTypeName($nb = 0): string
     {
@@ -49,9 +49,7 @@ class PropostaItem extends CommonDBChild
      */
     public static function calcularSubtotal(array $item): float
     {
-        $bruto = (float) $item['quantidade'] * (float) $item['valor_unitario'];
-
-        return round($bruto * (1 - ((float) $item['desconto_pct'] / 100)), 2);
+        return Calculo::subtotal($item['quantidade'], $item['valor_unitario'], $item['desconto_pct']);
     }
 
     /**

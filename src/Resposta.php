@@ -81,18 +81,6 @@ class Resposta extends CommonGLPI
         return $row ?: null;
     }
 
-    /**
-     * Código de verificação exibido ao cliente: os 16 primeiros caracteres do hash, em grupos de 4.
-     */
-    public static function formatarCodigo(?string $hash): string
-    {
-        if ($hash === null || $hash === '') {
-            return '';
-        }
-
-        return implode('-', str_split(strtoupper(substr($hash, 0, 16)), 4));
-    }
-
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
         if ($item instanceof Proposta && !$item->isNewItem()) {
@@ -118,7 +106,7 @@ class Resposta extends CommonGLPI
         foreach (self::getDaProposta($item->getID()) as $row) {
             $cpf = $row['cpf_mascarado'];
             if ($ver_cpf && !empty($row['cpf_cifrado'])) {
-                $cpf = self::formatarCpf((new GLPIKey())->decrypt($row['cpf_cifrado']) ?? '') ?: $cpf;
+                $cpf = Cpf::formatar((new GLPIKey())->decrypt($row['cpf_cifrado']) ?? '') ?: $cpf;
             }
             $linhas[] = [
                 'tipo'     => $row['tipo'] === self::TIPO_ACEITE ? __('Aceite', 'propostas') : __('Dúvida', 'propostas'),
@@ -128,7 +116,7 @@ class Resposta extends CommonGLPI
                 'nome'     => $row['nome'],
                 'cpf'      => $cpf,
                 'mensagem' => $row['mensagem'],
-                'codigo'   => self::formatarCodigo($row['hash_valores']),
+                'codigo'   => Calculo::codigo($row['hash_valores']),
                 'hash'     => $row['hash_valores'],
                 'ip'       => $row['ip'],
                 'agente'   => $row['user_agent'],
@@ -142,53 +130,5 @@ class Resposta extends CommonGLPI
         ]);
 
         return true;
-    }
-
-    /* ------------------------------------------------------------------
-     * CPF
-     * ------------------------------------------------------------------ */
-
-    public static function somenteDigitos(string $valor): string
-    {
-        return preg_replace('/\D/', '', $valor) ?? '';
-    }
-
-    public static function validarCpf(string $cpf): bool
-    {
-        $cpf = self::somenteDigitos($cpf);
-        if (strlen($cpf) !== 11 || preg_match('/^(\d)\1{10}$/', $cpf) === 1) {
-            return false;
-        }
-        for ($t = 9; $t < 11; $t++) {
-            $soma = 0;
-            for ($i = 0; $i < $t; $i++) {
-                $soma += (int) $cpf[$i] * (($t + 1) - $i);
-            }
-            $digito = ((10 * $soma) % 11) % 10;
-            if ((int) $cpf[$t] !== $digito) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    public static function formatarCpf(string $cpf): string
-    {
-        $cpf = self::somenteDigitos($cpf);
-
-        return strlen($cpf) === 11
-            ? sprintf('%s.%s.%s-%s', substr($cpf, 0, 3), substr($cpf, 3, 3), substr($cpf, 6, 3), substr($cpf, 9, 2))
-            : '';
-    }
-
-    /**
-     * Ex.: ***.456.789-**
-     */
-    public static function mascararCpf(string $cpf): string
-    {
-        $cpf = self::somenteDigitos($cpf);
-
-        return strlen($cpf) === 11 ? sprintf('***.%s.%s-**', substr($cpf, 3, 3), substr($cpf, 6, 3)) : '';
     }
 }
