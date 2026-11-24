@@ -212,8 +212,9 @@
                          placeholder="Como consta no seu documento" value="{{ valores.nome|default('') }}">
                </label>
                <label>CPF
-                  <input type="text" name="cpf" required maxlength="14" inputmode="numeric" autocomplete="off"
-                         placeholder="000.000.000-00">
+                  <input type="text" name="cpf" id="aceite-cpf" required maxlength="14" inputmode="numeric" autocomplete="off"
+                         placeholder="000.000.000-00" aria-describedby="aceite-cpf-aviso">
+                  <span class="aviso-campo" id="aceite-cpf-aviso" aria-live="polite"></span>
                </label>
                <label>Cargo na empresa
                   <input type="text" name="cargo" required maxlength="255" autocomplete="organization-title"
@@ -244,6 +245,49 @@
             </form>
          </details>
       </section>
+      <script>
+         /* CPF: pontos e traço entram sozinhos; com os 11 dígitos, confere os verificadores antes de enviar.
+            O servidor confere de novo (Cpf::validar) e aceita com ou sem pontuação. */
+         (function () {
+            const campo = document.getElementById('aceite-cpf');
+            const aviso = document.getElementById('aceite-cpf-aviso');
+            if (!campo) { return; }
+
+            function digitos(valor) {
+               return valor.replace(/\D/g, '').slice(0, 11);
+            }
+
+            function formatar(d) {
+               let s = d.slice(0, 3);
+               if (d.length > 3) { s += '.' + d.slice(3, 6); }
+               if (d.length > 6) { s += '.' + d.slice(6, 9); }
+               if (d.length > 9) { s += '-' + d.slice(9, 11); }
+               return s;
+            }
+
+            function valido(d) {
+               if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) { return false; }
+               for (let t = 9; t < 11; t++) {
+                  let soma = 0;
+                  for (let i = 0; i < t; i++) { soma += Number(d[i]) * (t + 1 - i); }
+                  if (Number(d[t]) !== ((10 * soma) % 11) % 10) { return false; }
+               }
+               return true;
+            }
+
+            function conferir() {
+               const d = digitos(campo.value);
+               campo.value = formatar(d);
+               const erro = d.length === 11 && !valido(d) ? 'CPF inválido — confira os números.' : '';
+               campo.setCustomValidity(erro);
+               campo.classList.toggle('invalido', erro !== '');
+               aviso.textContent = erro;
+            }
+
+            campo.addEventListener('input', conferir);
+            campo.addEventListener('blur', conferir);
+         })();
+      </script>
    {% endif %}
 </main>
 
