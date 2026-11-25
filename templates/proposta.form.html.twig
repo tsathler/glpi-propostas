@@ -353,6 +353,13 @@
       }) }}
    {% endif %}
 
+   {# Anotação interna (não aparece para o cliente); pode mudar mesmo com a proposta enviada. #}
+   {{ fields.textareaField('comment', item.fields['comment'], _n('Comment', 'Comments', get_plural_number()), {
+      full_width: true,
+      rows: 3,
+      helper: __('Anotação interna da equipe comercial. O cliente não vê.', 'propostas')
+   }) }}
+
    {% if not item.isNewItem() %}
       <div class="col-12 mt-3">
          <div class="card bg-light-lt">

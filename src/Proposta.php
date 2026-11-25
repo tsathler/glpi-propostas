@@ -316,15 +316,17 @@ class Proposta extends CommonDBTM
     }
 
     /**
-     * Sem o campo Nome na configuração, ele sai do formulário (o nome é gerado sozinho).
+     * Campos padrão do formulário do GLPI: só o Nome (quando pedido na configuração). Os comentários
+     * saem daqui e vão para o fim do formulário (proposta.form.html.twig), para o modelo ou o número
+     * abrirem o formulário em vez de uma caixa de anotação.
      *
      * @return array<int|string, string>
      */
     public function getFormFields(): array
     {
-        $campos = parent::getFormFields();
+        $fora = self::pedeNome() ? ['comment'] : ['comment', 'name'];
 
-        return self::pedeNome() ? $campos : array_values(array_filter($campos, static fn ($c): bool => $c !== 'name'));
+        return array_values(array_filter(parent::getFormFields(), static fn ($c): bool => !in_array($c, $fora, true)));
     }
 
     public function post_addItem(): void
