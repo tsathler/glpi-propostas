@@ -5,6 +5,23 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-25
+
+### Added
+
+- Elementos decorativos na página do cliente (Configuração > Plug-ins > Propostas > Identidade visual): até 6 imagens em PNG ou WebP com fundo transparente (formas e grafismos da marca), espalhadas, giradas e cortadas nas bordas no topo, no quadro de decisão e, em telas largas, bem claras nas margens. Cada proposta usa uma combinação delas, sempre a mesma para a mesma proposta. O plugin corta as margens transparentes, reduz o lado para 360 px e grava em WebP; as imagens vão embutidas na página. No celular aparecem menos; na impressão, sem as das margens. Sem imagens, a página fica sem decoração.
+
+### Changed
+
+- Página do cliente reorganizada e com novo visual:
+  - topo com "Proposta para", a razão social e, abaixo, o título da proposta sem repetir a razão social (o nome automático "{modelo} – {razão social}" aparece só como "{modelo}"); o nome fantasia só aparece quando é outro nome, não uma repetição (ou um corte) da razão social;
+  - a versão sai do subtítulo e só aparece a partir da segunda, como "revisão N", ao lado do número da proposta (o texto do aceite continua citando a versão);
+  - ficha única com emissão, validade ("válida até"), contato, consultor e o botão de imprimir, logo abaixo do topo; o cartão "Condições comerciais" deixa de repetir emissão e consultor e fica com o prazo de validade e o texto das condições;
+  - seções numeradas; listas e subtítulos dos blocos de texto com mais destaque; blocos "depois dos valores" como fecho, mais discretos;
+  - "Investimento" numa seção só: por unidade, um cartão de preço por item (tipo, "de/por" e selo de desconto); com totais, o resumo e as listas de itens ficam juntos;
+  - formulário de aceite com CPF e cargo lado a lado, campos maiores e foco visível; atalho fixo "Aceitar proposta" enquanto o quadro de decisão está fora da tela;
+  - ajustes para celular e impressão.
+
 ## [1.6.0] - 2026-11-25
 
 ### Added
@@ -206,7 +223,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/tsathler/glpi-propostas/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/tsathler/glpi-propostas/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/tsathler/glpi-propostas/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/tsathler/glpi-propostas/compare/v1.4.3...v1.5.0

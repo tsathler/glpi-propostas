@@ -58,6 +58,30 @@
          {{ __('Cores no formato #rrggbb. Em branco, a página usa as cores padrão do plugin.', 'propostas') }}
       </div>
       <div class="mb-3">
+         <label class="form-label" for="decoracao">{{ __('Elementos decorativos', 'propostas') }}</label>
+         {% if marca_decoracao is not empty %}
+            <div class="d-flex flex-wrap gap-2 mb-2">
+               {% for vaga, uri in marca_decoracao %}
+                  <div class="text-center">
+                     <div class="p-2 rounded" style="background: {{ marca_cor_principal ?: marca_padrao.principal }};">
+                        <img src="{{ uri }}" alt="{{ __('Elemento decorativo', 'propostas') }} {{ vaga }}" style="width: 72px; height: 72px; object-fit: contain;">
+                     </div>
+                     <div class="form-check d-inline-block mt-1">
+                        <input class="form-check-input" type="checkbox" id="remover_decoracao_{{ vaga }}" name="remover_decoracao[]" value="{{ vaga }}">
+                        <label class="form-check-label small" for="remover_decoracao_{{ vaga }}">{{ __('Remover', 'propostas') }}</label>
+                     </div>
+                  </div>
+               {% endfor %}
+            </div>
+         {% endif %}
+         {% if marca_decoracao|length < marca_decoracao_maximo %}
+            <input type="file" class="form-control" id="decoracao" name="decoracao[]" multiple accept="image/png,image/webp">
+         {% endif %}
+         <div class="form-hint mt-1">
+            {{ __('Até %d imagens em PNG ou WebP com fundo transparente (formas, traços, grafismos da marca), até 2 MB cada. Aparecem espalhadas, giradas e cortadas nas bordas no topo, no quadro de decisão e, em telas largas, bem claras nas margens; cada proposta usa uma combinação delas. As margens transparentes são cortadas e o lado é reduzido para no máximo 360 px. Sem imagens, a página fica sem decoração.', 'propostas')|format(marca_decoracao_maximo) }}
+         </div>
+      </div>
+      <div class="mb-3">
          <label class="form-label" for="marca_rodape">{{ __('Texto do rodapé', 'propostas') }}</label>
          <input type="text" class="form-control" id="marca_rodape" name="marca_rodape" maxlength="{{ marca_rodape_maximo }}"
                 value="{{ marca_rodape }}" placeholder="{{ __('Ex.: Copyright © 2026 Sua organização. Todos os direitos reservados', 'propostas') }}">

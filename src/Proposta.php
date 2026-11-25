@@ -1424,9 +1424,14 @@ class Proposta extends CommonDBTM
             'aceite'        => $aceite,
             'numero'        => $this->getNumero(),
             'titulo'        => (string) $this->fields['name'],
+            // Topo sem repetir a razão social: título sem ela no fim e nome fantasia só quando é outro nome.
+            'subtitulo'     => Cabecalho::subtitulo((string) $this->fields['name'], (string) $this->fields['empresa_razao_social']),
             'empresa'       => [
                 'razao_social'  => (string) $this->fields['empresa_razao_social'],
-                'nome_fantasia' => (string) $this->fields['empresa_nome_fantasia'],
+                'nome_fantasia' => Cabecalho::nomeFantasia(
+                    (string) $this->fields['empresa_nome_fantasia'],
+                    (string) $this->fields['empresa_razao_social']
+                ),
                 'cnpj'          => Cnpj::formatar((string) $this->fields['empresa_cnpj']),
             ],
             'blocos'        => array_map(

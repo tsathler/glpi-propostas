@@ -56,6 +56,16 @@ if (isset($_POST['update'])) {
             'campo_nome_ativo'          => !empty($_POST['campo_nome_ativo']) ? '1' : '0',
             'campo_condicoes_ativo'     => !empty($_POST['campo_condicoes_ativo']) ? '1' : '0',
         ]);
+        // Elementos decorativos: primeiro remove os marcados, depois guarda os enviados nas vagas livres.
+        foreach ((array) ($_POST['remover_decoracao'] ?? []) as $vaga) {
+            Marca::removerDecoracao((int) $vaga);
+        }
+        foreach (Marca::arquivosEnviados($_FILES['decoracao'] ?? []) as $arquivo) {
+            $erro = Marca::salvarDecoracao($arquivo);
+            if ($erro !== null) {
+                Session::addMessageAfterRedirect(htmlescape($erro), false, ERROR);
+            }
+        }
         if (!empty($_POST['remover_logo'])) {
             Marca::removerLogo();
         } elseif ((int) ($_FILES['logo_publico']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
@@ -101,6 +111,8 @@ TemplateRenderer::getInstance()->display('@propostas/config.html.twig', [
     'marca_cor_destaque'        => (string) ($config['marca_cor_destaque'] ?? ''),
     'marca_padrao'              => ['principal' => Marca::COR_PRINCIPAL_PADRAO, 'destaque' => Marca::COR_DESTAQUE_PADRAO],
     'marca_logo'                => Marca::logoDataUri(),
+    'marca_decoracao'           => Marca::decoracaoPorVaga(),
+    'marca_decoracao_maximo'    => Marca::DECORACAO_MAXIMO,
     'marca_rodape'              => (string) ($config['marca_rodape'] ?? ''),
     'marca_rodape_maximo'       => Marca::RODAPE_MAXIMO,
     'campo_nome_ativo'          => (string) ($config['campo_nome_ativo'] ?? '1') !== '0',

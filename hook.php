@@ -439,6 +439,7 @@ function plugin_propostas_uninstall(): bool
     ]);
     // Logotipo da página do cliente (pasta de arquivos do plugin).
     GlpiPlugin\Propostas\Marca::removerLogo();
+    GlpiPlugin\Propostas\Marca::removerDecoracoes();
 
     return true;
 }
