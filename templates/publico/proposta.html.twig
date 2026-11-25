@@ -3,6 +3,7 @@
  # @license GPL-3.0-or-later
  #}
 {% extends '@propostas/publico/_base.html.twig' %}
+{% import '@propostas/publico/_marca.html.twig' as ui %}
 
 {% block titulo %}Proposta {{ p.numero }} — {{ p.titulo }}{% endblock %}
 
@@ -12,12 +13,11 @@
 {# Elementos decorativos: cada vaga recebe uma das imagens configuradas, em rodízio a partir do número da proposta. #}
 {% set decos = marca.decoracao|default([])|length %}
 {% set semente = p.numero|default(0) * 1 %}
-{% macro deco(vaga, ordem, total, semente) %}<span class="deco {{ vaga }}" aria-hidden="true" style="background-image: var(--deco-{{ (semente + ordem) % total }});"></span>{% endmacro %}
 {% if decos %}
-   <div class="margens" aria-hidden="true">{{ _self.deco('m1', 5, decos, semente) }}{{ _self.deco('m2', 6, decos, semente) }}</div>
+   <div class="margens" aria-hidden="true">{{ ui.deco('m1', 5, decos, semente) }}{{ ui.deco('m2', 6, decos, semente) }}</div>
 {% endif %}
 <header class="topo">
-   {% if decos %}{% for v in ['t1', 't2', 't3', 't4'] %}{{ _self.deco(v, loop.index0, decos, semente) }}{% endfor %}{% endif %}
+   {% if decos %}{% for v in ['t1', 't2', 't3', 't4'] %}{{ ui.deco(v, loop.index0, decos, semente) }}{% endfor %}{% endif %}
    <div class="wrap">
       <div class="topo-marca">
          {% if marca.logo %}<img src="{{ marca.logo }}" alt="">{% endif %}
@@ -190,7 +190,7 @@
 
    {% if p.pode_responder %}
       <section class="decisao" id="responder">
-         {% if decos %}{{ _self.deco('d1', 4, decos, semente) }}{% endif %}
+         {% if decos %}{{ ui.deco('d1', 4, decos, semente) }}{% endif %}
          <h2>Vamos avançar?</h2>
          <p>Aceite a proposta para o seu consultor dar andamento, ou envie suas dúvidas antes.</p>
 
@@ -315,15 +315,7 @@
    {% endif %}
 </main>
 
-<footer class="rodape">
-   <div class="wrap">
-      {% if marca.logo %}<img src="{{ marca.logo }}" alt="">{% endif %}
-      {# Número e versão já estão no topo; o rodapé fica com o aviso de contato (quando não dá mais para
-         responder por aqui) e o texto configurado. #}
-      <div>
-         {% if not p.pode_responder and not p.aceite %}<div>Para aceitar ou tirar dúvidas, fale com o seu consultor.</div>{% endif %}
-         {% if marca.rodape %}<div class="rodape-texto">{{ marca.rodape }}</div>{% endif %}
-      </div>
-   </div>
-</footer>
+{# Número e versão já estão no topo; o rodapé fica com o aviso de contato (quando não dá mais para
+   responder por aqui) e o texto configurado. #}
+{{ ui.rodape(marca, not p.pode_responder and not p.aceite) }}
 {% endblock %}

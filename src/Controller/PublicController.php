@@ -6,6 +6,7 @@
  * Rotas: GET  /plugins/propostas/p/{token}
  *        POST /plugins/propostas/p/{token}/aceitar
  *        POST /plugins/propostas/p/{token}/duvida
+ *        qualquer outro /plugins/propostas/p/... -> aviso "Proposta não encontrada" (404)
  * Para acesso externo, exponha só estas rotas (exemplo de Nginx no README).
  * Os POST passam pela checagem de CSRF do próprio GLPI (campo _glpi_csrf_token).
  *
@@ -132,12 +133,25 @@ final class PublicController extends AbstractController
     }
 
     /**
+     * Qualquer outro endereço em /p/ (token com formato errado, link cortado ao copiar, caminho extra):
+     * o mesmo aviso "Proposta não encontrada" da marca, em vez da página de erro do GLPI. Prioridade
+     * baixa, para as rotas acima sempre casarem antes.
+     */
+    #[Route('/p/{resto}', name: 'proposta_invalida', requirements: ['resto' => '.*'], priority: -100)]
+    #[SecurityStrategy(Firewall::STRATEGY_NO_CHECK)]
+    public function invalida(): Response
+    {
+        return $this->verificarDisponivel(null) ?? new Response(status: Response::HTTP_NOT_FOUND);
+    }
+
+    /**
      * Link inexistente/revogado (404) ou expirado (410). Proposta aceita continua visível.
      */
     private function verificarDisponivel(?Proposta $proposta): ?Response
     {
         if ($proposta === null) {
             return $this->pagina('@propostas/publico/indisponivel.html.twig', [
+                'tipo'     => 'nao_encontrada',
                 'titulo'   => 'Proposta não encontrada',
                 'mensagem' => 'Este link não existe ou não é mais válido. Fale com o seu consultor para receber um link atualizado.',
             ], Response::HTTP_NOT_FOUND);
@@ -145,6 +159,7 @@ final class PublicController extends AbstractController
 
         if ($proposta->isLinkExpirado() && $proposta->fields['status'] !== Proposta::STATUS_ACEITA) {
             return $this->pagina('@propostas/publico/indisponivel.html.twig', [
+                'tipo'     => 'expirada',
                 'titulo'   => 'Proposta expirada',
                 'mensagem' => sprintf(
                     'A validade da proposta nº %s terminou. Fale com o seu consultor para receber uma versão atualizada.',
@@ -178,6 +193,7 @@ final class PublicController extends AbstractController
         if ($envios > self::LIMITE_POR_HORA) {
             $this->desfazerTentativa();
             return $this->pagina('@propostas/publico/indisponivel.html.twig', [
+                'tipo'     => 'limite',
                 'titulo'   => 'Muitas tentativas',
                 'mensagem' => 'Recebemos muitos envios a partir desta conexão. Aguarde alguns minutos e tente de novo, ou fale com o seu consultor.',
             ], Response::HTTP_TOO_MANY_REQUESTS);

@@ -1,0 +1,20 @@
+{#
+ # Propostas - peças da identidade visual compartilhadas pelas páginas públicas (proposta e avisos).
+ # @license GPL-3.0-or-later
+ #}
+
+{# Elemento decorativo numa vaga fixa (t1-t4 topo, d1 decisão, m1-m2 margens); a imagem gira a partir da semente. #}
+{% macro deco(vaga, ordem, total, semente) %}<span class="deco {{ vaga }}" aria-hidden="true" style="background-image: var(--deco-{{ (semente + ordem) % total }});"></span>{% endmacro %}
+
+{# Rodapé: logotipo, aviso de contato (quando pedido) e o texto configurado. #}
+{% macro rodape(marca, contato) %}
+<footer class="rodape">
+   <div class="wrap">
+      {% if marca.logo %}<img src="{{ marca.logo }}" alt="">{% endif %}
+      <div>
+         {% if contato %}<div>Para aceitar ou tirar dúvidas, fale com o seu consultor.</div>{% endif %}
+         {% if marca.rodape %}<div class="rodape-texto">{{ marca.rodape }}</div>{% endif %}
+      </div>
+   </div>
+</footer>
+{% endmacro %}
