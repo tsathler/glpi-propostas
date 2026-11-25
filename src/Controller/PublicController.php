@@ -17,6 +17,7 @@ namespace GlpiPlugin\Propostas\Controller;
 use Glpi\Controller\AbstractController;
 use Glpi\Http\Firewall;
 use Glpi\Security\Attribute\SecurityStrategy;
+use GlpiPlugin\Propostas\Marca;
 use GlpiPlugin\Propostas\Proposta;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -246,6 +247,7 @@ final class PublicController extends AbstractController
         $response->headers->set('Referrer-Policy', 'no-referrer');
         $response->headers->set('X-Frame-Options', 'DENY');
 
-        return $this->render($template, $parametros, $response);
+        // Logotipo e cores da configuração, em todas as páginas públicas (proposta e avisos).
+        return $this->render($template, $parametros + ['marca' => Marca::dadosPublicos()], $response);
     }
 }

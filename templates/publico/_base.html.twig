@@ -12,9 +12,16 @@
    <meta name="referrer" content="no-referrer">
    <title>{% block titulo %}Proposta{% endblock %}</title>
    <style>
+      /* Cores da marca vêm da configuração do plugin (Marca::corValida, sempre #rrggbb); os tons
+         derivados saem delas. Sem configuração, ficam iguais às cores de antes. */
       :root {
-         --fundo: #f4f6fa; --cartao: #ffffff; --texto: #111827; --suave: #6b7280; --borda: #e5e7eb;
-         --escuro: #0b1220; --escuro-2: #13213d; --destaque: #2563eb; --destaque-claro: #dbeafe; --ok: #059669;
+         --fundo: #f4f6fa; --cartao: #ffffff; --texto: #111827; --suave: #6b7280; --borda: #e5e7eb; --ok: #059669;
+         --principal: {{ marca.cor_principal|default('#13213d') }};
+         --destaque: {{ marca.cor_destaque|default('#2563eb') }};
+         --escuro: color-mix(in srgb, var(--principal) 55%, #000);
+         --escuro-2: var(--principal);
+         --destaque-claro: color-mix(in srgb, var(--destaque) 16%, #fff);
+         --destaque-topo: color-mix(in srgb, var(--destaque) 40%, #fff);
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; }
@@ -23,10 +30,17 @@
          background: var(--fundo); color: var(--texto); line-height: 1.5; font-size: 15px;
       }
       .wrap { max-width: 820px; margin: 0 auto; padding: 0 16px; }
-      .topo { background: linear-gradient(135deg, var(--escuro) 0%, var(--escuro-2) 100%); color: #fff; padding: 40px 0 96px; }
-      .rotulo { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; font-weight: 600; color: #93c5fd; }
+      .topo { background: linear-gradient(135deg, var(--escuro) 0%, var(--escuro-2) 100%); color: #fff; padding: 32px 0 96px; }
+      .topo.compacto { padding-bottom: 40px; }
+      .topo-marca { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+         padding-bottom: 20px; margin-bottom: 24px; border-bottom: 1px solid rgba(255, 255, 255, .12); }
+      .topo-marca img { display: block; height: 56px; width: auto; max-width: 60%; object-fit: contain; }
+      .topo-marca .rotulo { background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .16);
+         border-radius: 999px; padding: 6px 12px; color: #fff; }
+      .rotulo { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; font-weight: 600; color: var(--destaque-topo); }
       .topo h1 { font-size: 32px; line-height: 1.2; margin: 8px 0 4px; }
-      .topo .sub { color: #93c5fd; font-weight: 500; }
+      .topo-marca + h1 { margin-top: 0; }
+      .topo .sub { color: var(--destaque-topo); font-weight: 500; }
       .topo .empresa { color: #cbd5e1; font-size: 14px; margin-top: 2px; }
       .bloco .texto { font-size: 15px; }
       .bloco .texto p:first-child { margin-top: 0; }
@@ -38,7 +52,7 @@
       .cards { display: grid; grid-template-columns: 2fr 1.3fr; gap: 16px; margin-top: -64px; }
       .cards.um { grid-template-columns: minmax(0, 520px); }
       .card { background: var(--cartao); border-radius: 14px; padding: 22px; box-shadow: 0 6px 24px rgba(15, 23, 42, .08); }
-      .card.forte { background: linear-gradient(135deg, #0f1f45 0%, #1e3a8a 100%); color: #fff; }
+      .card.forte { background: linear-gradient(135deg, var(--escuro) 0%, color-mix(in srgb, var(--principal) 75%, var(--destaque)) 100%); color: #fff; }
       .card .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; opacity: .75; }
       .card .valor { font-size: 28px; font-weight: 700; margin: 6px 0 2px; }
       .card .valor small { font-size: 14px; font-weight: 500; opacity: .75; }
@@ -46,6 +60,9 @@
       section { margin-top: 36px; }
       .chip { display: inline-block; background: var(--destaque); color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 3px 10px; }
       h2 { font-size: 20px; margin: 8px 0 14px; }
+      /* Títulos das seções com o detalhe na cor de destaque (o quadro de decisão fica de fora). */
+      main section:not(.decisao) > h2 { display: flex; align-items: center; gap: 10px; }
+      main section:not(.decisao) > h2::before { content: ""; flex: 0 0 4px; height: 20px; border-radius: 2px; background: var(--destaque); }
       .barra { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--borda); margin-bottom: 8px; }
       .linha { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--borda); }
       .linha:last-child { border-bottom: 0; }
@@ -71,6 +88,7 @@
       .faixa.erro { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
       .faixa code { font-weight: 700; letter-spacing: .04em; }
       main > .faixa:first-child { position: relative; z-index: 1; margin-top: -72px; margin-bottom: 88px; }
+      .topo.compacto + main > .faixa:first-child { margin-top: 24px; margin-bottom: 0; }
       .decisao { background: var(--escuro); color: #fff; border-radius: 16px; padding: 28px; text-align: center; }
       .decisao h2 { margin-top: 0; }
       .decisao > p { color: #cbd5e1; margin-top: 0; }
@@ -92,12 +110,17 @@
       .formulario .check input { margin-top: 4px; }
       .formulario .nota { margin: 0; color: var(--suave); font-size: 13px; }
       .formulario button { justify-self: start; }
-      .rodape { margin: 48px 0 0; padding: 22px 0; background: var(--escuro); color: #9ca3af; font-size: 13px; }
+      .rodape { margin: 48px 0 0; padding: 24px 0; background: var(--escuro); color: #9ca3af; font-size: 13px; }
+      .rodape .wrap { display: flex; align-items: center; gap: 20px; }
+      .rodape img { height: 36px; width: auto; flex: 0 0 auto; opacity: .9; }
       .aviso { text-align: center; padding: 96px 16px; }
       .aviso h1 { font-size: 26px; margin-bottom: 8px; }
       .aviso p { color: var(--suave); max-width: 460px; margin: 0 auto; }
+      .rodape-texto { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: 12px; color: #9ca3af; }
       @media (max-width: 640px) {
          .topo h1 { font-size: 26px; }
+         .topo-marca img { height: 44px; }
+         .rodape .wrap { flex-direction: column; align-items: flex-start; gap: 12px; }
          .cards { grid-template-columns: 1fr; }
          .linha { flex-direction: column; align-items: flex-start; }
          .linha .sub { text-align: left; padding-left: 20px; }
@@ -105,6 +128,8 @@
       @media print {
          body { background: #fff; }
          .topo { padding: 24px 0 72px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+         .topo.compacto { padding-bottom: 24px; }
+         .decisao, .rodape { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
          .card { box-shadow: none; border: 1px solid var(--borda); }
          .card.forte, .chip, .barra, .ponto { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
          .acoes, .rodape, .decisao { display: none; }

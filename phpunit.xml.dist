@@ -21,6 +21,7 @@
             <file>src/Cpf.php</file>
             <file>src/Cnpj.php</file>
             <file>src/Visibilidade.php</file>
+            <file>src/Marca.php</file>
         </include>
     </source>
 </phpunit>
