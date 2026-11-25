@@ -7,9 +7,18 @@
 {% block titulo %}Proposta {{ p.numero }} — {{ p.titulo }}{% endblock %}
 
 {% block conteudo %}
-<header class="topo">
+{# Sem os cartões de total (por unidade ou sem itens), o topo não precisa da sobra que os encaixa. #}
+{% set com_cards = p.exibicao != 'unidade' and (p.recorrentes or p.pontuais) %}
+<header class="topo{{ com_cards ? '' : ' compacto' }}">
    <div class="wrap">
-      <div class="rotulo">Proposta comercial · nº {{ p.numero }}</div>
+      {% if marca.logo %}
+         <div class="topo-marca">
+            <img src="{{ marca.logo }}" alt="">
+            <div class="rotulo">Proposta comercial · nº {{ p.numero }}</div>
+         </div>
+      {% else %}
+         <div class="rotulo">Proposta comercial · nº {{ p.numero }}</div>
+      {% endif %}
       {% if p.empresa.razao_social %}
          <h1>{{ p.empresa.razao_social }}</h1>
          <div class="sub">{{ p.titulo }} · versão {{ p.versao }}</div>
@@ -293,9 +302,13 @@
 
 <footer class="rodape">
    <div class="wrap">
-      Proposta nº {{ p.numero }} · versão {{ p.versao }}.
-      {% if not p.pode_responder and not p.aceite %}Para aceitar ou tirar dúvidas, fale com o seu consultor.{% endif %}
-      O acesso a esta proposta é registrado e informado ao consultor responsável.
+      {% if marca.logo %}<img src="{{ marca.logo }}" alt="">{% endif %}
+      <div>
+         Proposta nº {{ p.numero }} · versão {{ p.versao }}.
+         {% if not p.pode_responder and not p.aceite %}Para aceitar ou tirar dúvidas, fale com o seu consultor.{% endif %}
+         O acesso a esta proposta é registrado e informado ao consultor responsável.
+         {% if marca.rodape %}<div class="rodape-texto">{{ marca.rodape }}</div>{% endif %}
+      </div>
    </div>
 </footer>
 {% endblock %}

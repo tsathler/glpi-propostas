@@ -7,7 +7,7 @@
    <div class="card-header">
       <h3 class="card-title"><i class="ti ti-file-dollar"></i> {{ __('Propostas', 'propostas') }}</h3>
    </div>
-   <form method="post" class="card-body">
+   <form method="post" class="card-body" enctype="multipart/form-data">
       <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}">
       <div class="mb-3">
          <label class="form-label" for="url_publica">{{ __('Endereço externo do link público', 'propostas') }}</label>
@@ -21,6 +21,50 @@
          {{ __('Os links gerados agora começam com:', 'propostas') }}
          <code>{{ url_efetiva }}/plugins/propostas/p/…</code>
       </p>
+
+      <hr>
+      <h4>{{ __('Identidade visual da página do cliente', 'propostas') }}</h4>
+      <div class="row">
+         <div class="col-md-6 mb-3">
+            <label class="form-label" for="logo_publico">{{ __('Logotipo', 'propostas') }}</label>
+            {% if marca_logo %}
+               <div class="mb-2 p-3 rounded d-inline-block" style="background: {{ marca_cor_principal ?: marca_padrao.principal }};">
+                  <img src="{{ marca_logo }}" alt="{{ __('Logotipo atual', 'propostas') }}" style="max-height: 48px; max-width: 100%;">
+               </div>
+               <div class="form-check mb-2">
+                  <input class="form-check-input" type="checkbox" id="remover_logo" name="remover_logo" value="1">
+                  <label class="form-check-label" for="remover_logo">{{ __('Remover o logotipo', 'propostas') }}</label>
+               </div>
+            {% endif %}
+            <input type="file" class="form-control" id="logo_publico" name="logo_publico" accept="image/png,image/jpeg,image/webp">
+            <div class="form-hint mt-1">
+               {{ __('PNG, JPEG ou WebP, até 2 MB. Aparece no topo escuro da página: use a versão clara do logotipo, de preferência PNG com fundo transparente. As margens transparentes são cortadas e a altura é reduzida para no máximo 160 px.', 'propostas') }}
+            </div>
+         </div>
+         <div class="col-md-3 mb-3">
+            <label class="form-label" for="marca_cor_principal">{{ __('Cor principal', 'propostas') }}</label>
+            <input type="text" class="form-control" id="marca_cor_principal" name="marca_cor_principal" maxlength="7"
+                   value="{{ marca_cor_principal }}" placeholder="{{ marca_padrao.principal }}">
+            <div class="form-hint mt-1">{{ __('Topo e quadro de decisão. Use uma cor escura.', 'propostas') }}</div>
+         </div>
+         <div class="col-md-3 mb-3">
+            <label class="form-label" for="marca_cor_destaque">{{ __('Cor de destaque', 'propostas') }}</label>
+            <input type="text" class="form-control" id="marca_cor_destaque" name="marca_cor_destaque" maxlength="7"
+                   value="{{ marca_cor_destaque }}" placeholder="{{ marca_padrao.destaque }}">
+            <div class="form-hint mt-1">{{ __('Botão de aceite, etiquetas e detalhe dos títulos.', 'propostas') }}</div>
+         </div>
+      </div>
+      <div class="form-hint mb-3">
+         {{ __('Cores no formato #rrggbb. Em branco, a página usa as cores padrão do plugin.', 'propostas') }}
+      </div>
+      <div class="mb-3">
+         <label class="form-label" for="marca_rodape">{{ __('Texto do rodapé', 'propostas') }}</label>
+         <input type="text" class="form-control" id="marca_rodape" name="marca_rodape" maxlength="{{ marca_rodape_maximo }}"
+                value="{{ marca_rodape }}" placeholder="{{ __('Ex.: Copyright © 2026 Sua organização. Todos os direitos reservados', 'propostas') }}">
+         <div class="form-hint mt-1">
+            {{ __('Uma linha de texto puro, no rodapé da página do cliente, abaixo das informações da proposta. Em branco, não aparece.', 'propostas') }}
+         </div>
+      </div>
 
       <hr>
       <h4>{{ __('Busca de CNPJ', 'propostas') }}</h4>

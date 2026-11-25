@@ -5,6 +5,18 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-25
+
+### Added
+
+- Identidade visual da página do cliente, em **Configuração > Plug-ins > Propostas**: logotipo (PNG, JPEG ou WebP; as margens transparentes são cortadas e a altura reduzida para 160 px) e duas cores, a principal (topo e quadro de decisão) e a de destaque (botão de aceite, etiquetas e detalhe dos títulos). O logotipo fica na pasta de arquivos do plugin e vai embutido na página. Sem configuração, a página fica com as cores de antes.
+- Texto do rodapé da página do cliente (uma linha de texto puro, até 255 caracteres), na mesma configuração. Em branco, não aparece.
+
+### Changed
+
+- Topo da página do cliente: logotipo à esquerda e o número da proposta à direita, acima do nome da empresa; sem a sobra embaixo quando não há os cartões de total (exibição por unidade).
+- Títulos das seções com um detalhe na cor de destaque; rodapé com o logotipo.
+
 ## [1.4.3] - 2026-11-24
 
 ### Changed
@@ -176,7 +188,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.4.3...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/tsathler/glpi-propostas/compare/v1.4.3...v1.5.0
 [1.4.3]: https://github.com/tsathler/glpi-propostas/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/tsathler/glpi-propostas/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/tsathler/glpi-propostas/compare/v1.4.0...v1.4.1
