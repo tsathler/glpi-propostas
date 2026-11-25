@@ -156,8 +156,6 @@ class NotificationTargetProposta extends NotificationTarget
             }
             return;
         }
-        \Config::setConfigurationValues('plugin:propostas', ['instalado_notificacoes' => '1', 'instalado_notificacoes_equipes' => '1']);
-
         $itemtype = Proposta::class;
         $agora    = $_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s');
 
@@ -175,6 +173,7 @@ class NotificationTargetProposta extends NotificationTarget
             'css'      => '',
         ]);
         if (!$templates_id) {
+            // Sem marcador: a próxima instalação (--force) tenta de novo.
             return;
         }
 
@@ -191,6 +190,10 @@ class NotificationTargetProposta extends NotificationTarget
         foreach (self::NOMES as $evento => $nome) {
             self::criarNotificacao($evento, $nome, (int) $templates_id);
         }
+        // Notificações que já existiam (atualização de versão sem marcador) recebem o Gestor também.
+        // Marcadores só depois de tudo criado.
+        self::instalarEquipes();
+        \Config::setConfigurationValues('plugin:propostas', ['instalado_notificacoes' => '1', 'instalado_notificacoes_equipes' => '1']);
     }
 
     /** Nomes das notificações criadas na instalação (um por evento). */

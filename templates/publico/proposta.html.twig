@@ -216,11 +216,13 @@
                          placeholder="Como consta no seu documento" value="{{ valores.nome|default('') }}">
                </label>
                <div class="duas">
-                  <label>CPF
-                     <input type="text" name="cpf" id="aceite-cpf" required maxlength="14" inputmode="numeric" autocomplete="off"
-                            placeholder="000.000.000-00" aria-describedby="aceite-cpf-aviso">
+                  <div class="campo">
+                     <label>CPF
+                        <input type="text" name="cpf" id="aceite-cpf" required maxlength="14" inputmode="numeric" autocomplete="off"
+                               placeholder="000.000.000-00" aria-describedby="aceite-cpf-aviso">
+                     </label>
                      <span class="aviso-campo" id="aceite-cpf-aviso" aria-live="polite"></span>
-                  </label>
+                  </div>
                   <label>Cargo na empresa
                      <input type="text" name="cargo" required maxlength="255" autocomplete="organization-title"
                             value="{{ valores.cargo|default('') }}">
@@ -302,10 +304,16 @@
                return true;
             }
 
-            function conferir() {
+            function conferir(evento) {
                const d = digitos(campo.value);
                campo.value = formatar(d);
-               const erro = d.length === 11 && !valido(d) ? 'CPF inválido — confira os números.' : '';
+               const saiu = evento && evento.type === 'blur';
+               let erro = '';
+               if (d.length === 11 && !valido(d)) {
+                  erro = 'CPF inválido — confira os números.';
+               } else if (saiu && d.length > 0 && d.length < 11) {
+                  erro = 'CPF incompleto — são 11 números.';
+               }
                campo.setCustomValidity(erro);
                campo.classList.toggle('invalido', erro !== '');
                aviso.textContent = erro;

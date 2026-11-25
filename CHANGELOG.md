@@ -5,6 +5,26 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.7.4] - 2026-11-25
+
+### Fixed
+
+Pontos menores da auditoria de 25/11/2026:
+
+- **Cancelar a proposta** soluciona e fecha o chamado, como o aceite e a expiração. **Reabrir** registra um acompanhamento no chamado.
+- **Chamado vinculado apagado ou na lixeira** conta como fechado: o próximo link abre um chamado novo (antes os acompanhamentos se perdiam).
+- **Modelo usado por propostas** não pode ser excluído (o vínculo ficaria órfão); a mensagem orienta a desativar.
+- **Bloco de texto desativado** na biblioteca deixa de ser copiado para propostas novas.
+- **Validade** conferida no servidor: de 1 a 365 dias, na proposta e no modelo (antes só o navegador limitava).
+- **Entidade da proposta** só muda para uma entidade a que a pessoa tem acesso.
+- **Imagens enviadas** (logotipo e elementos decorativos) com mais de 25 milhões de pixels são recusadas antes de abrir, para não esgotar a memória.
+- **Notificações na instalação:** o marcador é gravado depois de tudo criado (se falhar, reinstalar tenta de novo) e o destinatário Gestor é conferido também nas notificações que já existiam.
+- **Status e Versão** saem da ação em massa (o servidor ignorava a mudança e o GLPI dizia que salvou).
+- **Página do cliente:** o botão fixo "Aceitar proposta" escondido não recebe mais o foco do teclado; o aviso do CPF é lido uma vez pelo leitor de tela e o CPF incompleto é avisado ao sair do campo; cor de fundo de reserva para navegadores sem `color-mix()`.
+- **Impressão:** blocos longos não pulam mais para a página seguinte; o texto do rodapé (direitos) sai no PDF.
+- **Formulário da proposta:** o valor final calculado na tela usa o mesmo arredondamento do servidor; trocar de modelo rápido não mistura mais os itens de dois modelos.
+- **Documentação:** README (o que os testes cobrem) e o documento das equipes atualizados.
+
 ## [1.7.3] - 2026-11-25
 
 ### Fixed
@@ -251,7 +271,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.3...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.4...HEAD
+[1.7.4]: https://github.com/tsathler/glpi-propostas/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/tsathler/glpi-propostas/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/tsathler/glpi-propostas/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/tsathler/glpi-propostas/compare/v1.7.0...v1.7.1

@@ -41,6 +41,20 @@ final class Calculo
         return array_map(static fn (float $v): float => round($v, 2), $totais);
     }
 
+    /** Validade da proposta em dias: mínimo e máximo aceitos. */
+    public const VALIDADE_MINIMA = 1;
+    public const VALIDADE_MAXIMA = 365;
+
+    /** Validade dentro dos limites? Aceita "15" ou 15; o resto é inválido. */
+    public static function validadeValida(mixed $dias): bool
+    {
+        $texto = trim((string) $dias);
+
+        return preg_match('/^\d+$/', $texto) === 1
+            && (int) $texto >= self::VALIDADE_MINIMA
+            && (int) $texto <= self::VALIDADE_MAXIMA;
+    }
+
     /** Exibição ao cliente: itens com quantidade, subtotal e totais somados (o padrão). */
     public const EXIBICAO_TOTAL = 'total';
 
