@@ -236,9 +236,22 @@
       .rodape img { height: 34px; width: auto; flex: 0 0 auto; opacity: .9; }
       .rodape-texto { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, .12); font-size: 12px; }
       .rodape-texto:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-      .aviso { text-align: center; padding: 96px 16px; }
-      .aviso h1 { font-size: 26px; margin-bottom: 8px; }
-      .aviso p { color: var(--suave); max-width: 460px; margin: 0 auto; }
+      /* Página de aviso (link inválido, proposta expirada, excesso de envios): topo, cartão e rodapé no pé da tela. */
+      .pagina-aviso { min-height: 100vh; display: flex; flex-direction: column; }
+      .pagina-aviso main { flex: 1 0 auto; width: 100%; }
+      .pagina-aviso .topo { padding-bottom: 120px; }
+      .pagina-aviso .topo-marca { margin-bottom: 0; }
+      .aviso {
+         position: relative; z-index: 1; max-width: 560px; margin: -80px auto 0; text-align: center; background: var(--cartao);
+         border: 1px solid var(--borda); border-radius: var(--raio); box-shadow: var(--sombra); padding: 36px 32px 32px;
+      }
+      .aviso-icone {
+         display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 16px;
+         background: var(--destaque-claro); color: var(--destaque-texto); margin-bottom: 16px;
+      }
+      .aviso-icone svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .aviso h1 { font-size: 24px; line-height: 1.25; letter-spacing: -.01em; margin: 0 0 8px; color: var(--principal); }
+      .aviso p { color: var(--suave); margin: 0 auto; max-width: 440px; }
 
       @media (max-width: 640px) {
          body { font-size: 15px; }
@@ -269,6 +282,8 @@
          .topo .deco.t3, .topo .deco.t4 { display: none; }
          /* No celular o quadro é estreito: ganha uma faixa livre no alto, onde fica o elemento, longe do texto e dos botões. */
          .decisao:has(.deco) { padding-top: 84px; }
+         .pagina-aviso .topo { padding-bottom: 96px; }
+         .aviso { padding: 28px 20px 24px; margin-top: -64px; }
          .decisao .deco.d1 { width: 230px; right: -46px; top: -178px; transform: rotate(-35deg); opacity: .6; }
          .rodape .wrap { flex-direction: column; align-items: flex-start; gap: 12px; }
       }
@@ -292,7 +307,7 @@
       }
    </style>
 </head>
-<body>
+<body class="{% block classe_body %}{% endblock %}">
    {% block conteudo %}{% endblock %}
 </body>
 </html>

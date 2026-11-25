@@ -1,15 +1,42 @@
 {#
- # Propostas - link inexistente, revogado ou expirado. Não revela qual dos casos,
- # exceto "expirada", que só aparece para quem tem um token válido.
+ # Propostas - link inexistente, revogado ou expirado, ou excesso de envios. Não revela qual dos
+ # casos de link inválido, exceto "expirada", que só aparece para quem tem um token válido.
+ # Mesma identidade visual da página da proposta: topo com logotipo e elementos decorativos, rodapé.
  # @license GPL-3.0-or-later
  #}
 {% extends '@propostas/publico/_base.html.twig' %}
+{% import '@propostas/publico/_marca.html.twig' as ui %}
 
 {% block titulo %}{{ titulo }}{% endblock %}
+{% block classe_body %}pagina-aviso{% endblock %}
 
 {% block conteudo %}
-<main class="aviso">
-   <h1>{{ titulo }}</h1>
-   <p>{{ mensagem }}</p>
+{% set decos = marca.decoracao|default([])|length %}
+<header class="topo">
+   {% if decos %}{% for v in ['t1', 't2', 't3', 't4'] %}{{ ui.deco(v, loop.index0, decos, 0) }}{% endfor %}{% endif %}
+   <div class="wrap">
+      <div class="topo-marca">
+         {% if marca.logo %}<img src="{{ marca.logo }}" alt="">{% endif %}
+         <div class="rotulo">Proposta comercial</div>
+      </div>
+   </div>
+</header>
+
+<main class="wrap">
+   <section class="aviso" role="status">
+      <span class="aviso-icone" aria-hidden="true">
+         {% if tipo|default('') == 'expirada' %}
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6M12 2v3"/></svg>
+         {% elseif tipo|default('') == 'limite' %}
+            <svg viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9"/></svg>
+         {% else %}
+            <svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1M4 4l16 16"/></svg>
+         {% endif %}
+      </span>
+      <h1>{{ titulo }}</h1>
+      <p>{{ mensagem }}</p>
+   </section>
 </main>
+
+{{ ui.rodape(marca, false) }}
 {% endblock %}

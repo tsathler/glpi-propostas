@@ -5,6 +5,13 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-11-25
+
+### Changed
+
+- Páginas de aviso do link (proposta expirada, link não encontrado, muitas tentativas) com a mesma identidade visual da página da proposta: topo com logotipo e elementos decorativos, cartão com ícone, título e mensagem, e o rodapé configurado. O rodapé e os elementos decorativos passam a vir de um arquivo compartilhado pelas páginas públicas.
+- Endereço em `/p/` fora do formato de um link de proposta (token cortado ao copiar, caminho extra) mostra o aviso "Proposta não encontrada" da marca (404), em vez da página de erro do GLPI.
+
 ## [1.7.0] - 2026-11-25
 
 ### Added
@@ -223,7 +230,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.1...HEAD
+[1.7.1]: https://github.com/tsathler/glpi-propostas/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/tsathler/glpi-propostas/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/tsathler/glpi-propostas/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/tsathler/glpi-propostas/compare/v1.5.0...v1.5.1
