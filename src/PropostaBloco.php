@@ -68,6 +68,15 @@ class PropostaBloco extends CommonDBChild
         return $this->isPropostaEditavel((int) $this->fields[self::$items_id]) && parent::canUpdateItem();
     }
 
+    /**
+     * Tirar uma linha de um rascunho é editar a proposta, não excluí-la: basta poder editar a
+     * proposta (o GLPI pediria o direito de excluir propostas, que o consultor não tem).
+     */
+    public static function canPurge(): bool
+    {
+        return static::canChild('canUpdate');
+    }
+
     public function canPurgeItem(): bool
     {
         return $this->isPropostaEditavel((int) $this->fields[self::$items_id]) && parent::canPurgeItem();

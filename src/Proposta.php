@@ -91,6 +91,19 @@ class Proposta extends CommonDBTM
         return $ids === null ? [] : [self::getTable() . '.users_id_consultor' => $ids];
     }
 
+    /**
+     * Ids das propostas que o usuário vê (nível de leitura + entidades ativas), como subconsulta,
+     * para filtrar itens e blocos na busca e na API.
+     */
+    public static function subconsultaVisiveis(): \Glpi\DBAL\QuerySubQuery
+    {
+        return new \Glpi\DBAL\QuerySubQuery([
+            'SELECT' => self::getTable() . '.id',
+            'FROM'   => self::getTable(),
+            'WHERE'  => self::criteriosVisibilidade() + getEntitiesRestrictCriteria(self::getTable(), '', '', true),
+        ]);
+    }
+
     /** Pode criar ou duplicar (com as equipes ligadas, só quem está numa equipe ou vê todas). */
     public static function podeCriarAgora(): bool
     {
@@ -466,12 +479,22 @@ class Proposta extends CommonDBTM
                 getAncestorsOf('glpi_entities', $entidade),
                 getSonsOf('glpi_entities', $entidade)
             );
+            // O aceite e a expiração solucionam e fecham o chamado: só vale um chamado que a pessoa
+            // pode editar, da entidade da proposta, e que não esteja ligado a outra proposta.
             if (
                 !$ticket->getFromDB($tickets_id)
-                || !$ticket->can($tickets_id, READ)
+                || !$ticket->can($tickets_id, UPDATE)
                 || !in_array((int) $ticket->fields['entities_id'], $mesmo_ramo, false)
             ) {
-                Session::addMessageAfterRedirect(htmlescape(__('Chamado vinculado inválido: escolha um chamado que você vê, da entidade da proposta.', 'propostas')), false, ERROR);
+                Session::addMessageAfterRedirect(htmlescape(__('Chamado vinculado inválido: escolha um chamado que você pode editar, da entidade da proposta.', 'propostas')), false, ERROR);
+                return false;
+            }
+            $outras = countElementsInTable(self::getTable(), [
+                'tickets_id' => $tickets_id,
+                'NOT'        => ['id' => (int) ($this->fields['id'] ?? 0)],
+            ]);
+            if ($outras > 0) {
+                Session::addMessageAfterRedirect(htmlescape(__('Este chamado já está vinculado a outra proposta.', 'propostas')), false, ERROR);
                 return false;
             }
         }
@@ -1389,6 +1412,8 @@ class Proposta extends CommonDBTM
                 'unitario'    => $moeda((float) $item['valor_unitario']),
                 'desconto'    => (float) $item['desconto_pct'] > 0 ? $numero((float) $item['desconto_pct']) . '%' : null,
                 'subtotal'    => $moeda($subtotal),
+                // Exibição por unidade: com quantidade diferente de 1, o cartão mostra a conta.
+                'quantidade_um' => abs((float) $item['quantidade'] - 1.0) < 0.00001,
                 // Exibição por unidade: o preço de uma unidade já com o desconto (de/por).
                 'final'       => $moeda(Calculo::subtotal(1, $item['valor_unitario'], $item['desconto_pct'])),
                 'percentual'  => $total_tipo > 0 ? round($subtotal / $total_tipo * 100, 2) : 0,

@@ -452,9 +452,14 @@ function plugin_propostas_uninstall(): bool
  */
 function plugin_propostas_addDefaultWhere($itemtype): array
 {
-    if ($itemtype !== GlpiPlugin\Propostas\Proposta::class) {
-        return [];
+    if ($itemtype === GlpiPlugin\Propostas\Proposta::class) {
+        return GlpiPlugin\Propostas\Proposta::criteriosVisibilidade();
+    }
+    // Itens e blocos das propostas (busca e API REST): só os das propostas que o usuário vê,
+    // nas entidades ativas. Sem isso, quem lê "as próprias" listaria os de todos pela API.
+    if (in_array($itemtype, [GlpiPlugin\Propostas\PropostaItem::class, GlpiPlugin\Propostas\PropostaBloco::class], true)) {
+        return [$itemtype::getTable() . '.' . $itemtype::$items_id => GlpiPlugin\Propostas\Proposta::subconsultaVisiveis()];
     }
 
-    return GlpiPlugin\Propostas\Proposta::criteriosVisibilidade();
+    return [];
 }

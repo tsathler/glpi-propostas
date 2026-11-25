@@ -73,6 +73,36 @@ final class MarcaTest extends TestCase
         self::assertSame([], Marca::arquivosEnviados(['name' => [''], 'type' => [''], 'tmp_name' => [''], 'error' => [UPLOAD_ERR_NO_FILE], 'size' => [0]]));
     }
 
+    public function testContraste(): void
+    {
+        self::assertEqualsWithDelta(21.0, Marca::contraste('#000000', '#ffffff'), 0.01);
+        self::assertEqualsWithDelta(1.0, Marca::contraste('#777777', '#777777'), 0.0001);
+    }
+
+    /** @return array<string, array{string}> */
+    public static function coresParaTextoBranco(): array
+    {
+        return [
+            'laranja'       => ['#f97316'],
+            'amarelo'       => ['#facc15'],
+            'branco'        => ['#ffffff'],
+            'azul padrão'   => [Marca::COR_DESTAQUE_PADRAO],
+            'escuro padrão' => [Marca::COR_PRINCIPAL_PADRAO],
+        ];
+    }
+
+    #[DataProvider('coresParaTextoBranco')]
+    public function testLegivelComBranco(string $cor): void
+    {
+        $legivel = Marca::legivelComBranco($cor);
+
+        self::assertMatchesRegularExpression('/^#[0-9a-f]{6}$/', $legivel);
+        self::assertGreaterThanOrEqual(Marca::CONTRASTE_MINIMO, Marca::contraste($legivel, '#ffffff'));
+        if (Marca::contraste($cor, '#ffffff') >= Marca::CONTRASTE_MINIMO) {
+            self::assertSame($cor, $legivel, 'cor que já é legível não muda');
+        }
+    }
+
     public function testVagaLivre(): void
     {
         self::assertSame(1, Marca::vagaLivre([]));

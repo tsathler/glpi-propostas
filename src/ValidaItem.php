@@ -34,11 +34,7 @@ trait ValidaItem
     {
         foreach (['quantidade', 'valor_unitario', 'desconto_pct'] as $campo) {
             if (isset($input[$campo]) && is_string($input[$campo])) {
-                $valor = trim($input[$campo]);
-                if (str_contains($valor, ',')) {
-                    $valor = str_replace(['.', ','], ['', '.'], $valor);
-                }
-                $input[$campo] = $valor;
+                $input[$campo] = Calculo::normalizarNumero($input[$campo]);
             }
         }
 

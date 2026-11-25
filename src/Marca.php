@@ -50,6 +50,46 @@ final class Marca
         return preg_match('/^[0-9a-f]{6}$/', $cor) === 1 ? '#' . $cor : null;
     }
 
+    /** Contraste mínimo do texto branco sobre as cores da marca (WCAG AA para texto comum). */
+    public const CONTRASTE_MINIMO = 4.5;
+
+    /** Luminância relativa (WCAG 2) de uma cor #rrggbb. */
+    public static function luminancia(string $hex): float
+    {
+        $canal = static function (int $v): float {
+            $c = $v / 255;
+
+            return $c <= 0.03928 ? $c / 12.92 : (($c + 0.055) / 1.055) ** 2.4;
+        };
+        [$r, $g, $b] = sscanf(ltrim($hex, '#'), '%02x%02x%02x');
+
+        return 0.2126 * $canal((int) $r) + 0.7152 * $canal((int) $g) + 0.0722 * $canal((int) $b);
+    }
+
+    /** Contraste entre duas cores #rrggbb (1 a 21). */
+    public static function contraste(string $a, string $b): float
+    {
+        $la = self::luminancia($a);
+        $lb = self::luminancia($b);
+
+        return (max($la, $lb) + 0.05) / (min($la, $lb) + 0.05);
+    }
+
+    /**
+     * A mesma cor, escurecida aos poucos (mistura com preto) até o texto branco ficar legível sobre
+     * ela. Cor que já é escura o bastante volta igual.
+     */
+    public static function legivelComBranco(string $hex): string
+    {
+        [$r, $g, $b] = sscanf(ltrim($hex, '#'), '%02x%02x%02x');
+        $cor = $hex;
+        for ($fator = 1.0; $fator > 0 && self::contraste($cor, '#ffffff') < self::CONTRASTE_MINIMO; $fator -= 0.02) {
+            $cor = sprintf('#%02x%02x%02x', (int) round($r * $fator), (int) round($g * $fator), (int) round($b * $fator));
+        }
+
+        return $cor;
+    }
+
     /** Tamanho máximo do texto do rodapé. */
     public const RODAPE_MAXIMO = 255;
 
@@ -65,16 +105,21 @@ final class Marca
     }
 
     /**
-     * @return array{logo: ?string, cor_principal: string, cor_destaque: string, rodape: string, decoracao: list<string>}
+     * @return array{logo: ?string, cor_principal: string, cor_destaque: string, cor_destaque_forte: string, rodape: string, decoracao: list<string>}
      */
     public static function dadosPublicos(): array
     {
         $config = \Config::getConfigurationValues('plugin:propostas', ['marca_cor_principal', 'marca_cor_destaque', 'marca_rodape']);
+        $principal = self::corValida($config['marca_cor_principal'] ?? null) ?? self::COR_PRINCIPAL_PADRAO;
+        $destaque  = self::corValida($config['marca_cor_destaque'] ?? null) ?? self::COR_DESTAQUE_PADRAO;
 
         return [
             'logo'          => self::logoDataUri(),
-            'cor_principal' => self::corValida($config['marca_cor_principal'] ?? null) ?? self::COR_PRINCIPAL_PADRAO,
-            'cor_destaque'  => self::corValida($config['marca_cor_destaque'] ?? null) ?? self::COR_DESTAQUE_PADRAO,
+            // O topo e o quadro de decisão têm texto branco sobre a cor principal: cor clara é escurecida.
+            'cor_principal' => self::legivelComBranco($principal),
+            'cor_destaque'  => $destaque,
+            // Botões e textos na cor de destaque: a versão legível (a original continua nos detalhes).
+            'cor_destaque_forte' => self::legivelComBranco($destaque),
             'rodape'        => self::textoRodape($config['marca_rodape'] ?? ''),
             'decoracao'     => self::decoracaoDataUris(),
         ];

@@ -63,26 +63,40 @@ final class Calculo
     }
 
     /**
-     * Valor digitado no formulário: "123.45", "123,45" ou "1.234,56". Null se vazio, inválido ou negativo.
+     * Valor digitado no formulário: "123.45", "123,45", "1.234,56" ou "1.500" (milhar). Null se vazio, inválido ou negativo.
      */
     public static function lerValor(mixed $valor): ?float
     {
         if (is_int($valor) || is_float($valor)) {
             return $valor >= 0 ? (float) $valor : null;
         }
-        $texto = trim((string) $valor);
+        $texto = self::normalizarNumero((string) $valor);
         if ($texto === '') {
             return null;
-        }
-        if (str_contains($texto, ',')) {
-            // Formato brasileiro: ponto de milhar, vírgula decimal.
-            $texto = str_replace(['.', ','], ['', '.'], $texto);
         }
         if (!preg_match('/^\d+(\.\d+)?$/', $texto)) {
             return null;
         }
 
         return (float) $texto;
+    }
+
+    /**
+     * Número digitado no formato brasileiro para o formato do PHP ("1.234,56" → "1234.56").
+     * Só pontos em grupos de 3 ("1.500", "12.000.000") são milhar; "0.125" e "1.5" continuam decimais.
+     * Não valida: o que não for número segue como veio, para a validação recusar.
+     */
+    public static function normalizarNumero(string $texto): string
+    {
+        $texto = trim($texto);
+        if (str_contains($texto, ',')) {
+            return str_replace(['.', ','], ['', '.'], $texto);
+        }
+        if (preg_match('/^[1-9]\d{0,2}(\.\d{3})+$/', $texto) === 1) {
+            return str_replace('.', '', $texto);
+        }
+
+        return $texto;
     }
 
     /**
