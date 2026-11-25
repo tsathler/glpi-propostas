@@ -303,10 +303,10 @@
 <footer class="rodape">
    <div class="wrap">
       {% if marca.logo %}<img src="{{ marca.logo }}" alt="">{% endif %}
+      {# Número e versão já estão no topo; o rodapé fica com o aviso de contato (quando não dá mais para
+         responder por aqui) e o texto configurado. #}
       <div>
-         Proposta nº {{ p.numero }} · versão {{ p.versao }}.
-         {% if not p.pode_responder and not p.aceite %}Para aceitar ou tirar dúvidas, fale com o seu consultor.{% endif %}
-         O acesso a esta proposta é registrado e informado ao consultor responsável.
+         {% if not p.pode_responder and not p.aceite %}<div>Para aceitar ou tirar dúvidas, fale com o seu consultor.</div>{% endif %}
          {% if marca.rodape %}<div class="rodape-texto">{{ marca.rodape }}</div>{% endif %}
       </div>
    </div>
