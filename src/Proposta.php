@@ -1485,8 +1485,6 @@ class Proposta extends CommonDBTM
             if ($row !== null) {
                 $quando = new \DateTimeImmutable((string) $row['date_creation']);
                 $aceite = [
-                    'nome'   => (string) $row['nome'],
-                    'cargo'  => (string) ($row['cargo'] ?? ''),
                     'data'   => $quando->format('d/m/Y') . ' às ' . $quando->format('H:i'),
                     'codigo' => Calculo::codigo($row['hash_valores']),
                 ];

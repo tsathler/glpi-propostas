@@ -5,6 +5,20 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-25
+
+### Added
+
+- **Privacidade (LGPD):**
+  - ação automática diária `limpar` que apaga IP e navegador de acessos ao link e de dúvidas com mais de 180 dias (a linha fica com a data; o aceite mantém os dele, que são a prova do contrato);
+  - aviso de privacidade no formulário de aceite, configurável em Configuração > Plug-ins > Propostas (em branco, aparece um texto padrão sobre os dados registrados).
+
+### Changed
+
+- **CPF de quem aceitou** aparece completo só para quem gerencia modelos e blocos de texto (a supervisão); consultores e gestores veem a máscara.
+- **Página do cliente depois do aceite** mostra só a data e o código de verificação, sem nome nem cargo de quem aceitou (o link pode ser repassado). Nome e cargo continuam na aba "Respostas do cliente".
+- **Limite de tentativas** conta também os envios recusados (CPF inválido, campo vazio), para ninguém testar CPFs à vontade; o limite por hora passa de 10 para 20.
+
 ## [1.7.5] - 2026-11-25
 
 ### Fixed
@@ -284,7 +298,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.5...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/tsathler/glpi-propostas/compare/v1.7.5...v1.8.0
 [1.7.5]: https://github.com/tsathler/glpi-propostas/compare/v1.7.4...v1.7.5
 [1.7.4]: https://github.com/tsathler/glpi-propostas/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/tsathler/glpi-propostas/compare/v1.7.2...v1.7.3

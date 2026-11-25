@@ -35,6 +35,49 @@ class Acesso extends CommonGLPI
     /** Reaberturas do mesmo IP dentro deste intervalo não geram outra linha. */
     private const INTERVALO_MINUTOS = 10;
 
+    /**
+     * Dias que o IP e o navegador de quem abre o link (e de quem manda dúvida) ficam guardados.
+     * Depois disso a linha fica só com a data. O aceite guarda os dele: são a prova do contrato.
+     * shortcut: prazo fixo no código, virar configuração se o encarregado de dados (DPO) pedir outro.
+     */
+    public const RETENCAO_DIAS = 180;
+
+    public static function cronInfo($name)
+    {
+        if ($name === 'limpar') {
+            return ['description' => __('Apaga IP e navegador de acessos e dúvidas com mais de 180 dias (LGPD)', 'propostas')];
+        }
+
+        return [];
+    }
+
+    /**
+     * Apaga IP e navegador dos acessos ao link e das dúvidas mais antigos que o prazo. Aceites ficam.
+     *
+     * @return int 1 se apagou algo, 0 se não havia nada
+     */
+    public static function cronLimpar(\CronTask $task): int
+    {
+        global $DB;
+
+        $limite = date('Y-m-d H:i:s', time() - self::RETENCAO_DIAS * DAY_TIMESTAMP);
+        $total = 0;
+        foreach ([
+            self::TABELA     => [],
+            Resposta::TABELA => ['tipo' => Resposta::TIPO_DUVIDA],
+        ] as $tabela => $filtro) {
+            $DB->update($tabela, ['ip' => null, 'user_agent' => null], $filtro + [
+                'date_creation' => ['<', $limite],
+                'OR'            => [['NOT' => ['ip' => null]], ['NOT' => ['user_agent' => null]]],
+            ]);
+            $total += $DB->affectedRows();
+        }
+        $task->addVolume($total);
+        $task->log(sprintf('IP e navegador apagados em %d registro(s) com mais de %d dias', $total, self::RETENCAO_DIAS));
+
+        return $total > 0 ? 1 : 0;
+    }
+
     public static function registrar(int $propostas_id, int $versao, string $ip, string $user_agent): void
     {
         global $DB;

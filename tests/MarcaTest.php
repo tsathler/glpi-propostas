@@ -42,6 +42,14 @@ final class MarcaTest extends TestCase
         self::assertSame(Marca::RODAPE_MAXIMO, mb_strlen(Marca::textoRodape(str_repeat('é', 300))));
     }
 
+    public function testTextoComLimiteProprio(): void
+    {
+        self::assertSame(Marca::PRIVACIDADE_MAXIMO, mb_strlen(Marca::textoRodape(str_repeat('á', 1500), Marca::PRIVACIDADE_MAXIMO)));
+        self::assertSame('Linha um linha dois', Marca::textoRodape("Linha um
+
+linha   dois", Marca::PRIVACIDADE_MAXIMO));
+    }
+
     public function testPadroesSaoValidos(): void
     {
         self::assertSame(Marca::COR_PRINCIPAL_PADRAO, Marca::corValida(Marca::COR_PRINCIPAL_PADRAO));

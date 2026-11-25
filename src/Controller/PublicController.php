@@ -31,7 +31,7 @@ final class PublicController extends AbstractController
     private const TOKEN = '[A-Za-z0-9_-]{43}';
 
     /** Envios (aceite + dúvida) permitidos por IP (ou rede /64 do IPv6) a cada hora. */
-    private const LIMITE_POR_HORA = 10;
+    private const LIMITE_POR_HORA = 20;
 
     private const TABELA_TENTATIVAS = 'glpi_plugin_propostas_tentativas';
 
@@ -87,7 +87,6 @@ final class PublicController extends AbstractController
             (string) $request->headers->get('User-Agent', '')
         );
         if ($erros !== []) {
-            $this->desfazerTentativa();
             return $this->paginaProposta($proposta, $token, [
                 'form_aberto' => 'aceite',
                 'erros'       => $erros,
@@ -122,7 +121,6 @@ final class PublicController extends AbstractController
             (string) $request->headers->get('User-Agent', '')
         );
         if ($erros !== []) {
-            $this->desfazerTentativa();
             return $this->paginaProposta($proposta, $token, [
                 'form_aberto' => 'duvida',
                 'erros'       => $erros,
@@ -204,7 +202,7 @@ final class PublicController extends AbstractController
     }
 
     /**
-     * Envio recusado pela validação (CPF errado, campo vazio) não conta para o limite.
+     * Desfaz o registro do envio que estourou o limite (para o bloqueio não se estender sozinho).
      */
     private function desfazerTentativa(): void
     {
