@@ -254,21 +254,11 @@ final class Marca
         if ($vaga === null) {
             return sprintf(__('%1$s: a página aceita no máximo %2$d elementos decorativos. Remova algum antes.', 'propostas'), $nome, self::DECORACAO_MAXIMO);
         }
-        if ((int) ($arquivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) ($arquivo['tmp_name'] ?? ''))) {
-            return sprintf(__('%s: não foi possível receber o arquivo.', 'propostas'), $nome);
+        $recebido = self::validarUpload($arquivo, $nome);
+        if (is_string($recebido)) {
+            return $recebido;
         }
-        if ((int) ($arquivo['size'] ?? 0) > self::TAMANHO_MAXIMO) {
-            return sprintf(__('%s: cada imagem pode ter no máximo 2 MB.', 'propostas'), $nome);
-        }
-        $origem = (string) $arquivo['tmp_name'];
-        $info = @getimagesize($origem);
-        $tipo = is_array($info) ? (string) ($info['mime'] ?? '') : '';
-        if (!isset(self::TIPOS[$tipo])) {
-            return sprintf(__('%s: envie a imagem em PNG ou WebP, com fundo transparente.', 'propostas'), $nome);
-        }
-        if (!self::dimensoesAceitas($info)) {
-            return sprintf(__('%s: imagem grande demais em pixels. Reduza para até 5.000 × 5.000 px.', 'propostas'), $nome);
-        }
+        [$origem, $tipo] = $recebido;
         $imagem = self::carregarComGd($origem, $tipo);
         if ($imagem === null) {
             return sprintf(__('%s: o servidor não conseguiu abrir a imagem (extensão GD do PHP).', 'propostas'), $nome);
@@ -339,21 +329,11 @@ final class Marca
      */
     public static function salvarLogo(array $arquivo): ?string
     {
-        if ((int) ($arquivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) ($arquivo['tmp_name'] ?? ''))) {
-            return __('Não foi possível receber o arquivo do logotipo.', 'propostas');
+        $recebido = self::validarUpload($arquivo, __('Logotipo', 'propostas'));
+        if (is_string($recebido)) {
+            return $recebido;
         }
-        $origem = (string) $arquivo['tmp_name'];
-        if ((int) ($arquivo['size'] ?? 0) > self::TAMANHO_MAXIMO) {
-            return __('O logotipo pode ter no máximo 2 MB.', 'propostas');
-        }
-        $info = @getimagesize($origem);
-        $tipo = is_array($info) ? (string) ($info['mime'] ?? '') : '';
-        if (!isset(self::TIPOS[$tipo])) {
-            return __('Envie o logotipo em PNG, JPEG ou WebP.', 'propostas');
-        }
-        if (!self::dimensoesAceitas($info)) {
-            return __('Logotipo grande demais em pixels. Reduza para até 5.000 × 5.000 px.', 'propostas');
-        }
+        [$origem, $tipo] = $recebido;
 
         if (!is_dir(self::pasta()) && !@mkdir(self::pasta(), 0755, true)) {
             return __('Não foi possível gravar o logotipo na pasta de arquivos do plugin.', 'propostas');
@@ -372,6 +352,34 @@ final class Marca
         }
 
         return $ok ? null : __('Não foi possível gravar o logotipo na pasta de arquivos do plugin.', 'propostas');
+    }
+
+    /**
+     * Checagens comuns de uma imagem enviada (logotipo ou elemento decorativo): recebida, até 2 MB,
+     * PNG/JPEG/WebP de verdade e sem pixels demais.
+     *
+     * @param array<string, mixed> $arquivo item de $_FILES
+     * @return array{string, string}|string [arquivo temporário, tipo MIME], ou a mensagem de erro
+     */
+    private static function validarUpload(array $arquivo, string $rotulo): array|string
+    {
+        $origem = (string) ($arquivo['tmp_name'] ?? '');
+        if ((int) ($arquivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($origem)) {
+            return sprintf(__('%s: não foi possível receber o arquivo.', 'propostas'), $rotulo);
+        }
+        if ((int) ($arquivo['size'] ?? 0) > self::TAMANHO_MAXIMO) {
+            return sprintf(__('%s: a imagem pode ter no máximo 2 MB.', 'propostas'), $rotulo);
+        }
+        $info = @getimagesize($origem);
+        $tipo = is_array($info) ? (string) ($info['mime'] ?? '') : '';
+        if (!isset(self::TIPOS[$tipo])) {
+            return sprintf(__('%s: envie a imagem em PNG, JPEG ou WebP, de preferência com fundo transparente.', 'propostas'), $rotulo);
+        }
+        if (!self::dimensoesAceitas($info)) {
+            return sprintf(__('%s: imagem grande demais em pixels. Reduza para até 5.000 × 5.000 px.', 'propostas'), $rotulo);
+        }
+
+        return [$origem, $tipo];
     }
 
     private static function carregarComGd(string $origem, string $tipo): ?\GdImage

@@ -127,6 +127,30 @@ final class VisibilidadeTest extends TestCase
      * A lista do campo e a validação ao salvar não podem divergir: quem aparece pode ser escolhido,
      * e quem pode ser escolhido aparece.
      */
+    /**
+     * A lista (filtro da busca) e o formulário (podeVer) seguem a mesma regra em todos os níveis
+     * de leitura. Sem nível de leitura nenhum, quem barra antes é o canView do GLPI.
+     */
+    public function testListaBateComPodeVer(): void
+    {
+        $candidatos = [self::CONSULTOR_A, self::CONSULTOR_B, self::GESTOR, self::OUTRO];
+        $niveis = [V::MINHAS, V::EQUIPE, V::TODAS, V::MINHAS | V::EQUIPE, V::MINHAS | V::TODAS, V::EQUIPE | V::TODAS, V::MINHAS | V::EQUIPE | V::TODAS];
+
+        foreach ($niveis as $direitos) {
+            foreach ($candidatos as $usuario) {
+                $geridos = $usuario === self::GESTOR ? self::DA_EQUIPE : [];
+                $lista = V::consultoresVisiveis($direitos, $usuario, $geridos);
+                foreach ($candidatos as $consultor) {
+                    $this->assertSame(
+                        V::podeVer($direitos, $usuario, $consultor, $geridos),
+                        $lista === null || in_array($consultor, $lista, true),
+                        sprintf('direitos %d, usuário %d, consultor %d', $direitos, $usuario, $consultor)
+                    );
+                }
+            }
+        }
+    }
+
     public function testConsultoresBatemComPodeAtribuir(): void
     {
         $candidatos = [self::CONSULTOR_A, self::CONSULTOR_B, self::GESTOR, self::OUTRO];

@@ -127,6 +127,17 @@ final class ModeloValoresTest extends TestCase
         self::assertSame(100.0, $copia[2]['desconto_pct'], 'limite de 100%');
     }
 
+    public function testCopiaMantemValorDeQuatroCasas(): void
+    {
+        $modelo = [['id' => 1, 'tipo' => 'recorrente', 'name' => 'Por unidade', 'quantidade' => '1.00', 'valor_unitario' => '0.0125', 'desconto_pct' => '0.00']];
+
+        // O quadro da criação manda o valor do modelo sem arredondar (campo numérico, ponto decimal).
+        self::assertSame(0.0125, Calculo::itensDaCopia($modelo, [1 => '0.0125'])[0]['valor_unitario']);
+        self::assertSame(1.125, Calculo::itensDaCopia($modelo, [1 => '1.125'])[0]['valor_unitario'], 'campo numérico: ponto é decimal, não milhar');
+        self::assertSame(1234.56, Calculo::itensDaCopia($modelo, [1 => '1.234,56'])[0]['valor_unitario'], 'texto com vírgula: formato brasileiro');
+        self::assertSame('0.0125', Calculo::itensDaCopia($modelo, [1 => '-1'])[0]['valor_unitario'], 'negativo mantém o modelo');
+    }
+
     public function testNomeAutomatico(): void
     {
         self::assertSame('Plano B – Empresa Exemplo Ltda', Calculo::nomeAutomatico('Plano B', 'Empresa Exemplo Ltda'));

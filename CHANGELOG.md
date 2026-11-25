@@ -5,6 +5,19 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.7.5] - 2026-11-25
+
+### Fixed
+
+- **Preço do modelo com mais de 2 casas** (ex.: R$ 0,0125 por unidade) é copiado inteiro para a proposta. Antes o quadro da criação arredondava para 2 casas e a proposta gravava R$ 0,01. Os campos desse quadro são numéricos: neles o ponto é decimal ("1.125" é 1,125); o ponto de milhar ("1.500") vale nos campos de texto dos itens.
+- **Mudança numa equipe** acerta os observadores só dos chamados em andamento (antes carregava todos os chamados de proposta, inclusive solucionados e fechados), e alteração de membro que não mexe em grupo nem em Responsável não dispara a sincronização.
+- **Limite de tentativas da página pública:** IPv4 escrito como IPv6 (`::ffff:1.2.3.4`, em servidor que escuta os dois num socket só) volta a contar como o próprio IPv4; antes todos esses clientes dividiam o mesmo limite.
+
+### Changed
+
+- Permissões de itens e blocos de texto num arquivo só (`LinhaDoRascunho`), e checagens de imagem enviada (logotipo e elementos decorativos) numa função só, com as mesmas mensagens para os dois.
+- Testes novos: separação por IP, regra de visibilidade igual na lista e no formulário, cópia de preço com 4 casas.
+
 ## [1.7.4] - 2026-11-25
 
 ### Fixed
@@ -271,7 +284,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.4...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.5...HEAD
+[1.7.5]: https://github.com/tsathler/glpi-propostas/compare/v1.7.4...v1.7.5
 [1.7.4]: https://github.com/tsathler/glpi-propostas/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/tsathler/glpi-propostas/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/tsathler/glpi-propostas/compare/v1.7.1...v1.7.2

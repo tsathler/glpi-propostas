@@ -19,6 +19,7 @@ use Glpi\Controller\AbstractController;
 use Glpi\Http\Firewall;
 use Glpi\Security\Attribute\SecurityStrategy;
 use GlpiPlugin\Propostas\Marca;
+use GlpiPlugin\Propostas\Origem;
 use GlpiPlugin\Propostas\Proposta;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -178,7 +179,7 @@ final class PublicController extends AbstractController
     {
         global $DB;
 
-        $ip_hash = hash('sha256', self::origem((string) $request->getClientIp()));
+        $ip_hash = hash('sha256', Origem::deIp((string) $request->getClientIp()));
         $agora   = new \DateTimeImmutable();
         $limite  = $agora->modify('-1 hour')->format('Y-m-d H:i:s');
 
@@ -213,19 +214,6 @@ final class PublicController extends AbstractController
             $DB->delete(self::TABELA_TENTATIVAS, ['id' => $this->tentativa_id]);
             $this->tentativa_id = 0;
         }
-    }
-
-    /**
-     * Origem usada no limite: o IPv4 inteiro ou a rede /64 do IPv6 (cada cliente IPv6 costuma ter milhões de endereços).
-     */
-    private static function origem(string $ip): string
-    {
-        $bin = @inet_pton($ip);
-        if ($bin !== false && strlen($bin) === 16) {
-            return inet_ntop(substr($bin, 0, 8) . str_repeat("\0", 8)) . '/64';
-        }
-
-        return $ip;
     }
 
     /**
