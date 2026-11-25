@@ -235,8 +235,9 @@ final class PublicController extends AbstractController
     {
         return $this->pagina('@propostas/publico/proposta.html.twig', $extra + [
             'p'           => $proposta->getDadosPublicos(),
-            'acao_aceite' => $this->caminho($token) . '/aceitar',
-            'acao_duvida' => $this->caminho($token) . '/duvida',
+            // Com a âncora, a página devolvida com erro abre no quadro de decisão, onde fica o aviso.
+            'acao_aceite' => $this->caminho($token) . '/aceitar#responder',
+            'acao_duvida' => $this->caminho($token) . '/duvida#responder',
             'form_aberto' => null,
             'erros'       => [],
             'valores'     => [],

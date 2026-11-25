@@ -94,6 +94,9 @@
                      <div class="precificacao">
                         {% if i.desconto %}<div class="de">de <s>{{ i.unitario }}</s> por</div>{% endif %}
                         <div class="valor">{{ i.final }}{% if mensal %} <small>/mês</small>{% endif %}</div>
+                        {% if not i.quantidade_um %}
+                           <div class="qtd">{{ i.quantidade }} × {{ i.final }} = <strong>{{ i.subtotal }}</strong>{% if mensal %}/mês{% endif %}</div>
+                        {% endif %}
                      </div>
                   </article>
                {% endfor %}

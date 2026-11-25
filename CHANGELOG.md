@@ -5,6 +5,21 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.7.3] - 2026-11-25
+
+### Fixed
+
+Correções da auditoria de 25/11/2026:
+
+- **Itens e blocos das propostas na busca e na API REST** seguem a visibilidade da proposta (nível de leitura e entidades ativas). Antes, quem lia só as próprias propostas listava itens, preços e textos de todas pela API.
+- **Chamado vinculado à mão** precisa ser um chamado que a pessoa pode editar e que não esteja em outra proposta (o aceite e a expiração solucionam e fecham o chamado). Antes bastava ver o chamado.
+- **Números com ponto de milhar sem vírgula** ("1.500", "12.000.000") passam a valer mil e quinhentos, doze milhões, nos itens e nos valores da criação. Antes "1.500" virava 1,50. "0.125" e "1.5" continuam decimais.
+- **Exibição por unidade com quantidade diferente de 1:** o cartão do item mostra a conta (quantidade × preço = subtotal), que é o valor registrado no aceite.
+- **Erro no aceite ou na dúvida** (CPF inválido, campo vazio): a página volta no quadro de decisão, onde está o aviso, e não mais no topo.
+- **Contraste:** cor principal ou de destaque clara demais para texto branco é escurecida na página (contraste mínimo 4,5:1) nos botões, no topo e nos textos; a cor original continua nos detalhes.
+- **Remover item ou bloco de texto de um rascunho** pede só a permissão de editar a proposta, como adicionar. Antes exigia a de excluir propostas, e o consultor via o botão "Remover" mas recebia "Acesso negado".
+- **Textos longos sem espaço** (links, nomes) quebram em vez de alargar a página no celular; tabelas nos blocos rolam sozinhas; logo do rodapé não passa da largura da tela; cartão de item único alinhado à esquerda no celular.
+
 ## [1.7.2] - 2026-11-25
 
 ### Changed
@@ -236,7 +251,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.2...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.3...HEAD
+[1.7.3]: https://github.com/tsathler/glpi-propostas/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/tsathler/glpi-propostas/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/tsathler/glpi-propostas/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/tsathler/glpi-propostas/compare/v1.6.0...v1.7.0

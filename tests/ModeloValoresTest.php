@@ -29,7 +29,20 @@ final class ModeloValoresTest extends TestCase
             'número negativo'     => [-1.0, null],
             'texto'               => ['abc', null],
             'dois separadores'    => ['1.2.3', null],
+            'milhar sem vírgula'  => ['1.500', 1500.0],
+            'milhões sem vírgula' => ['12.000.000', 12000000.0],
+            'três casas com zero' => ['0.125', 0.125],
+            'ponto e duas casas'  => ['1500.00', 1500.0],
+            'quatro casas'        => ['1.5000', 1.5],
         ];
+    }
+
+    public function testNormalizarNumero(): void
+    {
+        self::assertSame('1500', Calculo::normalizarNumero(' 1.500 '));
+        self::assertSame('1234.56', Calculo::normalizarNumero('1.234,56'));
+        self::assertSame('0.125', Calculo::normalizarNumero('0.125'));
+        self::assertSame('abc', Calculo::normalizarNumero('abc'), 'não valida: a validação recusa depois');
     }
 
     #[DataProvider('valores')]
