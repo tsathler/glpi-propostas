@@ -1,11 +1,13 @@
 <?php
 
 /**
- * Propostas - identidade visual da página do cliente: logotipo e cores.
+ * Propostas - identidade visual da página do cliente: logotipo, cores, rodapé e elementos decorativos.
  *
  * Configurado em Configuração > Plug-ins > Propostas. O logotipo fica na pasta de arquivos do
  * plugin (GLPI_PLUGIN_DOC_DIR/propostas) e vai embutido na página (data URI): a página pública
- * não carrega nada de fora dela. Sem configuração, a página fica com as cores de antes.
+ * não carrega nada de fora dela. Os elementos decorativos (imagens transparentes espalhadas pelo
+ * topo, pelo quadro de decisão e pelas margens) ficam na mesma pasta, como decoracao-N.
+ * Sem configuração, a página fica com as cores de antes e sem decoração.
  *
  * @license GPL-3.0-or-later https://www.gnu.org/licenses/gpl-3.0.html
  */
@@ -25,6 +27,12 @@ final class Marca
 
     /** Altura máxima do logotipo guardado (px): basta para o topo, mesmo em telas de alta densidade. */
     public const ALTURA_MAXIMA = 160;
+
+    /** Quantos elementos decorativos a página aceita (vagas no topo, na decisão e nas margens). */
+    public const DECORACAO_MAXIMO = 6;
+
+    /** Lado máximo de cada elemento decorativo guardado (px): a página mostra até 560 px, em baixa opacidade. */
+    public const DECORACAO_LADO = 360;
 
     /** Tipos aceitos. SVG fica de fora: pode carregar script. */
     private const TIPOS = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'];
@@ -57,7 +65,7 @@ final class Marca
     }
 
     /**
-     * @return array{logo: ?string, cor_principal: string, cor_destaque: string, rodape: string}
+     * @return array{logo: ?string, cor_principal: string, cor_destaque: string, rodape: string, decoracao: list<string>}
      */
     public static function dadosPublicos(): array
     {
@@ -68,7 +76,160 @@ final class Marca
             'cor_principal' => self::corValida($config['marca_cor_principal'] ?? null) ?? self::COR_PRINCIPAL_PADRAO,
             'cor_destaque'  => self::corValida($config['marca_cor_destaque'] ?? null) ?? self::COR_DESTAQUE_PADRAO,
             'rodape'        => self::textoRodape($config['marca_rodape'] ?? ''),
+            'decoracao'     => self::decoracaoDataUris(),
         ];
+    }
+
+    /**
+     * Arquivos de $_FILES enviados num campo múltiplo (nome[]), um por item, sem os campos vazios.
+     *
+     * @param array<string, mixed> $campo item de $_FILES de um input "multiple"
+     * @return list<array<string, mixed>>
+     */
+    public static function arquivosEnviados(array $campo): array
+    {
+        if (!is_array($campo['error'] ?? null)) {
+            $campo = array_map(static fn ($v): array => [$v], $campo);
+        }
+        $arquivos = [];
+        foreach (array_keys($campo['error'] ?? []) as $i) {
+            if ((int) $campo['error'][$i] === UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+            $arquivos[] = [
+                'name'     => (string) ($campo['name'][$i] ?? ''),
+                'type'     => (string) ($campo['type'][$i] ?? ''),
+                'tmp_name' => (string) ($campo['tmp_name'][$i] ?? ''),
+                'error'    => (int) $campo['error'][$i],
+                'size'     => (int) ($campo['size'][$i] ?? 0),
+            ];
+        }
+
+        return $arquivos;
+    }
+
+    /**
+     * Primeira vaga livre (1 a DECORACAO_MAXIMO), dadas as vagas ocupadas. Null se todas estão ocupadas.
+     *
+     * @param list<int> $ocupadas
+     */
+    public static function vagaLivre(array $ocupadas): ?int
+    {
+        for ($vaga = 1; $vaga <= self::DECORACAO_MAXIMO; $vaga++) {
+            if (!in_array($vaga, $ocupadas, true)) {
+                return $vaga;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Elementos decorativos guardados, por vaga.
+     *
+     * @return array<int, string> vaga => caminho
+     */
+    public static function decoracoes(): array
+    {
+        $achados = [];
+        for ($vaga = 1; $vaga <= self::DECORACAO_MAXIMO; $vaga++) {
+            foreach (['webp', 'png'] as $extensao) {
+                $caminho = self::pasta() . '/decoracao-' . $vaga . '.' . $extensao;
+                if (is_file($caminho)) {
+                    $achados[$vaga] = $caminho;
+                    break;
+                }
+            }
+        }
+
+        return $achados;
+    }
+
+    /**
+     * @return array<int, string> vaga => data URI
+     */
+    public static function decoracaoPorVaga(): array
+    {
+        $uris = [];
+        foreach (self::decoracoes() as $vaga => $caminho) {
+            $dados = @file_get_contents($caminho);
+            if ($dados !== false) {
+                $tipo = str_ends_with($caminho, '.webp') ? 'image/webp' : 'image/png';
+                $uris[$vaga] = 'data:' . $tipo . ';base64,' . base64_encode($dados);
+            }
+        }
+
+        return $uris;
+    }
+
+    /** @return list<string> */
+    public static function decoracaoDataUris(): array
+    {
+        return array_values(self::decoracaoPorVaga());
+    }
+
+    public static function removerDecoracao(int $vaga): void
+    {
+        foreach (['webp', 'png'] as $extensao) {
+            $caminho = self::pasta() . '/decoracao-' . $vaga . '.' . $extensao;
+            if (is_file($caminho)) {
+                @unlink($caminho);
+            }
+        }
+    }
+
+    public static function removerDecoracoes(): void
+    {
+        for ($vaga = 1; $vaga <= self::DECORACAO_MAXIMO; $vaga++) {
+            self::removerDecoracao($vaga);
+        }
+    }
+
+    /**
+     * Guarda um elemento decorativo na primeira vaga livre: corta as margens transparentes, limita o
+     * lado e grava em WebP (ou PNG, sem suporte a WebP). Exige o GD, para não embutir arquivos enormes.
+     *
+     * @param array<string, mixed> $arquivo item de $_FILES
+     * @return string|null mensagem de erro, ou null se deu certo
+     */
+    public static function salvarDecoracao(array $arquivo): ?string
+    {
+        $nome = (string) ($arquivo['name'] ?? '');
+        $vaga = self::vagaLivre(array_keys(self::decoracoes()));
+        if ($vaga === null) {
+            return sprintf(__('%1$s: a página aceita no máximo %2$d elementos decorativos. Remova algum antes.', 'propostas'), $nome, self::DECORACAO_MAXIMO);
+        }
+        if ((int) ($arquivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) ($arquivo['tmp_name'] ?? ''))) {
+            return sprintf(__('%s: não foi possível receber o arquivo.', 'propostas'), $nome);
+        }
+        if ((int) ($arquivo['size'] ?? 0) > self::TAMANHO_MAXIMO) {
+            return sprintf(__('%s: cada imagem pode ter no máximo 2 MB.', 'propostas'), $nome);
+        }
+        $origem = (string) $arquivo['tmp_name'];
+        $info = @getimagesize($origem);
+        $tipo = is_array($info) ? (string) ($info['mime'] ?? '') : '';
+        if (!isset(self::TIPOS[$tipo])) {
+            return sprintf(__('%s: envie a imagem em PNG ou WebP, com fundo transparente.', 'propostas'), $nome);
+        }
+        $imagem = self::carregarComGd($origem, $tipo);
+        if ($imagem === null) {
+            return sprintf(__('%s: o servidor não conseguiu abrir a imagem (extensão GD do PHP).', 'propostas'), $nome);
+        }
+        if (!is_dir(self::pasta()) && !@mkdir(self::pasta(), 0755, true)) {
+            imagedestroy($imagem);
+            return __('Não foi possível gravar a imagem na pasta de arquivos do plugin.', 'propostas');
+        }
+
+        $imagem = self::ajustar($imagem, self::DECORACAO_LADO, self::DECORACAO_LADO);
+        imagealphablending($imagem, false);
+        imagesavealpha($imagem, true);
+        self::removerDecoracao($vaga);
+        $ok = function_exists('imagewebp')
+            ? imagewebp($imagem, self::pasta() . '/decoracao-' . $vaga . '.webp', 82)
+            : imagepng($imagem, self::pasta() . '/decoracao-' . $vaga . '.png', 9);
+        imagedestroy($imagem);
+
+        return $ok ? null : __('Não foi possível gravar a imagem na pasta de arquivos do plugin.', 'propostas');
     }
 
     public static function pasta(): string
@@ -200,8 +361,8 @@ final class Marca
         return $x1 < 0 ? null : ['x' => $x0, 'y' => $y0, 'width' => $x1 - $x0 + 1, 'height' => $y1 - $y0 + 1];
     }
 
-    /** Corta as margens transparentes e limita a altura. */
-    private static function ajustar(\GdImage $imagem): \GdImage
+    /** Corta as margens transparentes e limita a altura (e a largura, quando informada). */
+    private static function ajustar(\GdImage $imagem, int $altura_maxima = self::ALTURA_MAXIMA, ?int $largura_maxima = null): \GdImage
     {
         $area = self::areaVisivel($imagem);
         if ($area !== null && ($area['width'] < imagesx($imagem) || $area['height'] < imagesy($imagem))) {
@@ -216,13 +377,15 @@ final class Marca
 
         $largura = imagesx($imagem);
         $altura  = imagesy($imagem);
-        if ($altura > self::ALTURA_MAXIMA) {
-            $nova_largura = max(1, (int) round($largura * self::ALTURA_MAXIMA / $altura));
-            $menor = imagecreatetruecolor($nova_largura, self::ALTURA_MAXIMA);
+        $escala = min(1, $altura_maxima / $altura, $largura_maxima !== null ? $largura_maxima / $largura : 1);
+        if ($escala < 1) {
+            $nova_largura = max(1, (int) round($largura * $escala));
+            $nova_altura  = max(1, (int) round($altura * $escala));
+            $menor = imagecreatetruecolor($nova_largura, $nova_altura);
             imagealphablending($menor, false);
             imagesavealpha($menor, true);
             imagefill($menor, 0, 0, imagecolorallocatealpha($menor, 0, 0, 0, 127));
-            imagecopyresampled($menor, $imagem, 0, 0, 0, 0, $nova_largura, self::ALTURA_MAXIMA, $largura, $altura);
+            imagecopyresampled($menor, $imagem, 0, 0, 0, 0, $nova_largura, $nova_altura, $largura, $altura);
             imagedestroy($imagem);
             $imagem = $menor;
         }
