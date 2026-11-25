@@ -106,6 +106,18 @@
             };
             let sugerido = 0;
 
+            // Mesmo arredondamento do servidor (round do PHP 8.4, Calculo::subtotal): pela forma decimal
+            // mais curta do número, metade para cima. Ex.: 1,15 × 50% = 0,575 → 0,58; 8,45 × 90% → 7,60.
+            function arredondar2(x) {
+               const texto = Math.abs(x).toString();
+               if (texto.includes('e')) { return Math.round(x * 100) / 100; }
+               const partes = texto.split('.');
+               const decimais = (partes[1] || '') + '000';
+               let centavos = Number(partes[0]) * 100 + Number(decimais.slice(0, 2));
+               if (Number(decimais[2]) >= 5) { centavos += 1; }
+               return (x < 0 ? -centavos : centavos) / 100;
+            }
+
             function numero(campo) {
                const v = parseFloat(campo.value);
                return v > 0 ? v : 0;
@@ -117,7 +129,7 @@
                lista.querySelectorAll('tr').forEach(function (tr) {
                   const valor = numero(tr.querySelector('.propostas-campo-valor'));
                   const p = Math.min(numero(tr.querySelector('.propostas-campo-desconto')), 100);
-                  const final = Math.round(valor * (1 - p / 100) * 100) / 100;
+                  const final = arredondar2(valor * (1 - p / 100));
                   diferenca += valor - final;
                   const celula = tr.querySelector('.col-final');
                   celula.textContent = moeda.format(final);
@@ -196,13 +208,18 @@
                return tr;
             }
 
+            let pedido = 0;
+
             async function carregar(id) {
+               const meu = ++pedido;
                limpar();
                if (!id || id === '0') { caixa.classList.add('d-none'); return; }
                caixa.classList.remove('d-none');
                try {
                   const resposta = await fetch(url + '?id=' + encodeURIComponent(id), {credentials: 'same-origin'});
                   const dados = await resposta.json();
+                  // Modelo trocado de novo enquanto esperava: a resposta antiga é descartada.
+                  if (meu !== pedido) { return; }
                   if (!dados.ok) { msg.textContent = dados.erro || textos.erro; return; }
                   dados.itens.forEach(function (item) { lista.append(linha(item)); });
                   if (dados.itens.length === 0) { msg.textContent = textos.vazio; }

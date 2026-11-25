@@ -103,6 +103,15 @@ final class MarcaTest extends TestCase
         }
     }
 
+    public function testDimensoesAceitas(): void
+    {
+        self::assertTrue(Marca::dimensoesAceitas([800, 800]));
+        self::assertTrue(Marca::dimensoesAceitas([5000, 5000]));
+        self::assertFalse(Marca::dimensoesAceitas([20000, 20000]), '400 milhões de pixels');
+        self::assertFalse(Marca::dimensoesAceitas([0, 10]));
+        self::assertFalse(Marca::dimensoesAceitas(false));
+    }
+
     public function testVagaLivre(): void
     {
         self::assertSame(1, Marca::vagaLivre([]));

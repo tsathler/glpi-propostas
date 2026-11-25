@@ -14,6 +14,7 @@ namespace GlpiPlugin\Propostas;
 use CommonDBTM;
 use Glpi\Application\View\TemplateRenderer;
 use Log;
+use Session;
 
 class Modelo extends CommonDBTM
 {
@@ -65,10 +66,13 @@ class Modelo extends CommonDBTM
 
     /**
      * @param array<string, mixed> $input
-     * @return array<string, mixed>
+     * @return array<string, mixed>|false
      */
-    private function normalizarInput(array $input): array
+    private function normalizarInput(array $input): array|false
     {
+        if (!Proposta::conferirValidade($input)) {
+            return false;
+        }
         if (array_key_exists('desconto_especial_pct', $input)) {
             $input['desconto_especial_pct'] = Calculo::percentual($input['desconto_especial_pct']);
         }
@@ -113,6 +117,28 @@ class Modelo extends CommonDBTM
         $this->deleteChildrenAndRelationsFromDb([ModeloItem::class, ModeloBloco::class]);
     }
 
+    /** Quantas propostas foram criadas a partir deste modelo. */
+    public function propostasQueUsam(): int
+    {
+        return $this->isNewItem() ? 0 : countElementsInTable(Proposta::getTable(), ['plugin_propostas_modelos_id' => $this->getID()]);
+    }
+
+    /** Modelo usado por propostas não pode ser excluído: desative em vez disso. */
+    public function canPurgeItem(): bool
+    {
+        return parent::canPurgeItem() && $this->propostasQueUsam() === 0;
+    }
+
+    public function pre_deleteItem(): bool
+    {
+        if ($this->propostasQueUsam() > 0) {
+            Session::addMessageAfterRedirect(htmlescape(__('Este modelo foi usado por propostas e não pode ser excluído. Desmarque "Ativo" para ele não aparecer mais.', 'propostas')), false, ERROR);
+            return false;
+        }
+
+        return true;
+    }
+
     /**
      * Copia validade, aviso prévio (campo antigo, fora da tela) e condições do modelo para o input de uma proposta nova.
      *
@@ -149,6 +175,10 @@ class Modelo extends CommonDBTM
             ]);
         }
         foreach (ModeloBloco::getBlocosDoModelo($this->getID()) as $bloco) {
+            // Bloco desativado na biblioteca não vai mais para propostas novas.
+            if (empty($bloco['is_active'])) {
+                continue;
+            }
             (new PropostaBloco())->add([
                 PropostaBloco::$items_id => $propostas_id,
                 'name'                   => $bloco['name'],

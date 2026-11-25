@@ -104,6 +104,25 @@ class Proposta extends CommonDBTM
         ]);
     }
 
+    /**
+     * Validade vinda do formulário (quando veio): de 1 a 365 dias. Mensagem na tela se não.
+     *
+     * @param array<string, mixed> $input
+     */
+    public static function conferirValidade(array $input): bool
+    {
+        if (!array_key_exists('validade_dias', $input) || Calculo::validadeValida($input['validade_dias'])) {
+            return true;
+        }
+        Session::addMessageAfterRedirect(htmlescape(sprintf(
+            __('A validade deve ser de %1$d a %2$d dias.', 'propostas'),
+            Calculo::VALIDADE_MINIMA,
+            Calculo::VALIDADE_MAXIMA
+        )), false, ERROR);
+
+        return false;
+    }
+
     /** Pode criar ou duplicar (com as equipes ligadas, só quem está numa equipe ou vê todas). */
     public static function podeCriarAgora(): bool
     {
@@ -248,6 +267,9 @@ class Proposta extends CommonDBTM
 
         if (!self::podeCriarAgora()) {
             Session::addMessageAfterRedirect(htmlescape(__('Você não está em nenhuma equipe de consultores e não pode criar propostas. Procure o administrador do GLPI.', 'propostas')), false, ERROR);
+            return false;
+        }
+        if (!self::conferirValidade($input)) {
             return false;
         }
         if ((int) ($input['users_id_consultor'] ?? 0) <= 0) {
@@ -439,6 +461,16 @@ class Proposta extends CommonDBTM
             }
 
             return $input;
+        }
+
+        if (!self::conferirValidade($input)) {
+            return false;
+        }
+        // Mudar a entidade (ou a recursividade) só para uma entidade a que a pessoa tem acesso.
+        if (array_key_exists('entities_id', $input) && (int) $input['entities_id'] !== (int) $this->fields['entities_id']
+            && !Session::haveAccessToEntity((int) $input['entities_id'])) {
+            Session::addMessageAfterRedirect(htmlescape(__('Você não tem acesso à entidade escolhida.', 'propostas')), false, ERROR);
+            return false;
         }
 
         if (!$this->validarVinculos($input, (int) ($input['entities_id'] ?? $this->fields['entities_id']))) {
@@ -934,6 +966,13 @@ class Proposta extends CommonDBTM
                 __('Proposta reaberta como versão %d. O link anterior não funciona mais.', 'propostas'),
                 (int) $this->fields['versao']
             )));
+            if (!$this->chamadoFechado()) {
+                $this->adicionarAcompanhamento(sprintf(
+                    '<p><strong>Proposta nº %s reaberta para edição como versão %d.</strong> O link anterior deixou de funcionar.</p>',
+                    htmlescape($this->getNumero()),
+                    (int) $this->fields['versao']
+                ));
+            }
         }
 
         return $ok;
@@ -960,6 +999,11 @@ class Proposta extends CommonDBTM
         if ($ok) {
             $this->adicionarAcompanhamento(sprintf(
                 '<p><strong>Proposta nº %s (versão %d) cancelada.</strong> O link deixou de funcionar.</p>',
+                htmlescape($this->getNumero()),
+                (int) $this->fields['versao']
+            ));
+            $this->fecharChamado(sprintf(
+                '<p>Proposta nº %s (versão %d) cancelada.</p>',
                 htmlescape($this->getNumero()),
                 (int) $this->fields['versao']
             ));
@@ -1298,16 +1342,20 @@ class Proposta extends CommonDBTM
     }
 
     /**
-     * O chamado vinculado está fechado? (Chamado fechado não recebe mais acompanhamentos.)
+     * O chamado vinculado não serve mais? Fechado, na lixeira ou apagado: não recebe acompanhamentos,
+     * então o próximo link abre outro chamado.
      */
     private function chamadoFechado(): bool
     {
         $tickets_id = (int) $this->fields['tickets_id'];
+        if ($tickets_id <= 0) {
+            return false;
+        }
         $ticket = new \Ticket();
 
-        return $tickets_id > 0
-            && $ticket->getFromDB($tickets_id)
-            && in_array((int) $ticket->fields['status'], $ticket->getClosedStatusArray(), false);
+        return !$ticket->getFromDB($tickets_id)
+            || !empty($ticket->fields['is_deleted'])
+            || in_array((int) $ticket->fields['status'], $ticket->getClosedStatusArray(), false);
     }
 
     /**
@@ -1586,6 +1634,8 @@ class Proposta extends CommonDBTM
             'name'       => __('Status'),
             'datatype'   => 'specific',
             'searchtype' => ['equals', 'notequals'],
+            // Só as ações da proposta mudam o status.
+            'massiveaction' => false,
         ];
 
         $tab[] = [
@@ -1629,6 +1679,7 @@ class Proposta extends CommonDBTM
             'field'    => 'versao',
             'name'     => __('Versão', 'propostas'),
             'datatype' => 'integer',
+            'massiveaction' => false,
         ];
 
         $tab[] = [

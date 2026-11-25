@@ -28,6 +28,16 @@ final class Marca
     /** Altura máxima do logotipo guardado (px): basta para o topo, mesmo em telas de alta densidade. */
     public const ALTURA_MAXIMA = 160;
 
+    /** Pixels máximos de uma imagem enviada (largura × altura), antes de abrir com o GD: evita esgotar a memória. */
+    public const PIXELS_MAXIMOS = 25_000_000;
+
+    /** Imagem com dimensões aceitáveis? (getimagesize: [0] largura, [1] altura) */
+    public static function dimensoesAceitas(mixed $info): bool
+    {
+        return is_array($info) && (int) ($info[0] ?? 0) > 0 && (int) ($info[1] ?? 0) > 0
+            && (int) $info[0] * (int) $info[1] <= self::PIXELS_MAXIMOS;
+    }
+
     /** Quantos elementos decorativos a página aceita (vagas no topo, na decisão e nas margens). */
     public const DECORACAO_MAXIMO = 6;
 
@@ -256,6 +266,9 @@ final class Marca
         if (!isset(self::TIPOS[$tipo])) {
             return sprintf(__('%s: envie a imagem em PNG ou WebP, com fundo transparente.', 'propostas'), $nome);
         }
+        if (!self::dimensoesAceitas($info)) {
+            return sprintf(__('%s: imagem grande demais em pixels. Reduza para até 5.000 × 5.000 px.', 'propostas'), $nome);
+        }
         $imagem = self::carregarComGd($origem, $tipo);
         if ($imagem === null) {
             return sprintf(__('%s: o servidor não conseguiu abrir a imagem (extensão GD do PHP).', 'propostas'), $nome);
@@ -337,6 +350,9 @@ final class Marca
         $tipo = is_array($info) ? (string) ($info['mime'] ?? '') : '';
         if (!isset(self::TIPOS[$tipo])) {
             return __('Envie o logotipo em PNG, JPEG ou WebP.', 'propostas');
+        }
+        if (!self::dimensoesAceitas($info)) {
+            return __('Logotipo grande demais em pixels. Reduza para até 5.000 × 5.000 px.', 'propostas');
         }
 
         if (!is_dir(self::pasta()) && !@mkdir(self::pasta(), 0755, true)) {

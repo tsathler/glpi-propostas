@@ -1,10 +1,10 @@
 # Equipes e visibilidade das propostas
 
-Especificação da funcionalidade de equipes (versão 1.3.0). Os casos de teste no fim foram verificados num GLPI 11 de homologação, menos o envio real de notificações.
+Como funcionam as equipes, desde a versão 1.3.0. Os casos de teste no fim foram verificados num GLPI 11 de homologação, menos o envio real de notificações.
 
 ## Objetivo
 
-Hoje, quem tem o direito de leitura de *Propostas* vê todas as propostas das entidades a que tem acesso. Esta mudança limita a visão por pessoa:
+Sem equipes, quem tem o direito de leitura de *Propostas* veria todas as propostas das entidades a que tem acesso. As equipes limitam a visão por pessoa:
 
 - o **consultor** vê só as propostas em que ele é o consultor;
 - o **gestor de equipe** vê também as dos consultores da(s) equipe(s) dele, e pode agir nelas;

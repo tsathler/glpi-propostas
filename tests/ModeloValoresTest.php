@@ -37,6 +37,20 @@ final class ModeloValoresTest extends TestCase
         ];
     }
 
+    public function testValidade(): void
+    {
+        self::assertTrue(Calculo::validadeValida('15'));
+        self::assertTrue(Calculo::validadeValida(1));
+        self::assertTrue(Calculo::validadeValida(' 365 '));
+        self::assertFalse(Calculo::validadeValida('0'));
+        self::assertFalse(Calculo::validadeValida('-5'));
+        self::assertFalse(Calculo::validadeValida('366'));
+        self::assertFalse(Calculo::validadeValida('4000'));
+        self::assertFalse(Calculo::validadeValida('15.5'));
+        self::assertFalse(Calculo::validadeValida(''));
+        self::assertFalse(Calculo::validadeValida('abc'));
+    }
+
     public function testNormalizarNumero(): void
     {
         self::assertSame('1500', Calculo::normalizarNumero(' 1.500 '));

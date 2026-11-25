@@ -81,7 +81,7 @@ Se o endereço externo ficar em branco, os links usam o "URL da aplicação" do 
 ## Notas para quem mantém o plugin
 
 - **Rotas POST no GLPI 11.0.4:** o `PluginsRouterListener` não passa o método HTTP ao roteador de plugins, então rotas com `methods: ['POST']` nunca casam. As rotas `/aceitar` e `/duvida` não restringem o método, e o controller confere o POST.
-- **Testes:** cálculos e CPF ficam em `src/Calculo.php` e `src/Cpf.php`, sem dependência do GLPI. Para rodar os testes: `composer install && composer test`.
+- **Testes:** cobrem as classes sem dependência do GLPI (`Calculo`, `Cpf`, `Cnpj`, `Cabecalho`, `Marca`, `Visibilidade`, `Equipe` e a leitura dos valores do modelo), em `tests/`. O que depende do banco e da sessão do GLPI (gerar link, aceite, expiração, duplicar) é conferido num GLPI de homologação. Para rodar os testes: `composer install && composer test`.
 - **Hash do aceite:** o teste do hash fixa o resultado de um exemplo. Mudar o formato de `Calculo::hashValores()` faz os aceites antigos deixarem de conferir.
 
 ## Licença
