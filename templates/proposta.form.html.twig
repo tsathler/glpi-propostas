@@ -155,7 +155,8 @@
                grupo.className = 'input-group';
                const campo = document.createElement('input');
                campo.type = 'number';
-               campo.step = '0.01';
+               // "any": o preço do modelo pode ter até 4 casas (0,0125).
+               campo.step = 'any';
                campo.min = '0';
                if (sufixo === '%') { campo.max = '100'; }
                campo.className = 'form-control text-end ' + classe;
@@ -193,7 +194,7 @@
                const valor = document.createElement('td');
                valor.className = 'col-valor';
                valor.append(campoNumero('propostas-campo-valor', '_modelo_valores[' + item.id + ']',
-                  Number(item.valor).toFixed(2), item.nome, 'R$', ''));
+                  String(Number(item.valor)), item.nome, 'R$', ''));
 
                const desconto = document.createElement('td');
                desconto.className = 'col-desconto';

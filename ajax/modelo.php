@@ -40,7 +40,8 @@ $itens = array_map(
         'id'    => (int) $item['id'],
         'tipo'  => $item['tipo'] === Calculo::TIPO_PONTUAL ? Calculo::TIPO_PONTUAL : Calculo::TIPO_RECORRENTE,
         'nome'  => (string) $item['name'],
-        'valor' => round((float) $item['valor_unitario'], 2),
+        // Sem arredondar: o modelo guarda até 4 casas, e a proposta copia o valor como está.
+        'valor' => (float) $item['valor_unitario'],
         'desconto' => round((float) $item['desconto_pct'], 2),
     ],
     ModeloItem::getItensDoModelo($modelo->getID())

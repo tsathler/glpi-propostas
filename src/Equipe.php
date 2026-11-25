@@ -283,7 +283,19 @@ final class Equipe
                 $tickets[] = (int) $row['tickets_id'];
             }
         }
-        self::sincronizarChamados($tickets);
+        if ($tickets === []) {
+            return;
+        }
+        // Só os chamados em andamento (sincronizarChamado ignora os solucionados e fechados, que com o tempo são a maioria).
+        $abertos = [];
+        foreach ($DB->request([
+            'SELECT' => ['id'],
+            'FROM'   => \Ticket::getTable(),
+            'WHERE'  => ['id' => array_values(array_unique($tickets)), 'NOT' => ['status' => array_merge(\Ticket::getSolvedStatusArray(), \Ticket::getClosedStatusArray())]],
+        ]) as $row) {
+            $abertos[] = (int) $row['id'];
+        }
+        self::sincronizarChamados($abertos);
     }
 
     private static function sincronizarChamado(int $tickets_id): void
@@ -362,6 +374,10 @@ final class Equipe
     /** Entrada, saída ou mudança de Responsável numa equipe. */
     public static function aoMudarMembro(\CommonDBTM $item): void
     {
+        // Alteração que não mexe em grupo nem em Responsável (ex.: "receber notificações") não muda observadores.
+        if (!empty($item->updates) && array_intersect(['groups_id', 'is_manager'], $item->updates) === []) {
+            return;
+        }
         $grupo = (int) ($item->fields['groups_id'] ?? 0);
         $antes = (int) ($item->oldvalues['groups_id'] ?? $grupo);
         self::limparCache();

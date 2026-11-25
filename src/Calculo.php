@@ -124,15 +124,19 @@ final class Calculo
      */
     public static function itensDaCopia(array $itens_modelo, array $valores, array $descontos = []): array
     {
+        // Os campos do quadro são numéricos: o navegador manda ponto decimal ("1.125" é 1,125). Só
+        // texto com vírgula passa pela leitura brasileira (ponto de milhar).
+        $ler = static fn (mixed $v): ?float => is_numeric($v) ? ((float) $v >= 0 ? (float) $v : null) : self::lerValor($v);
         $copia = [];
         foreach ($itens_modelo as $item) {
             $id = (int) ($item['id'] ?? 0);
-            $digitado = self::lerValor($valores[$id] ?? null);
+            $digitado = $ler($valores[$id] ?? null);
             if ($digitado !== null) {
                 $item['valor_unitario'] = $digitado;
             }
-            if (self::lerValor($descontos[$id] ?? null) !== null) {
-                $item['desconto_pct'] = self::percentual($descontos[$id]);
+            $desconto = $ler($descontos[$id] ?? null);
+            if ($desconto !== null) {
+                $item['desconto_pct'] = round(min(100.0, $desconto), 2);
             }
             $copia[] = $item;
         }
