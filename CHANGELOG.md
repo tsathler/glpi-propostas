@@ -5,6 +5,12 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-25
+
+### Changed
+
+- Rodapé da página do cliente sem a linha fixa "Proposta nº … · versão … O acesso a esta proposta é registrado e informado ao consultor responsável." (o número e a versão já estão no topo). Fica o texto configurado e, quando a proposta não pode mais ser respondida pela página, o aviso para falar com o consultor.
+
 ## [1.5.0] - 2026-11-25
 
 ### Added
@@ -188,7 +194,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/tsathler/glpi-propostas/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/tsathler/glpi-propostas/compare/v1.4.3...v1.5.0
 [1.4.3]: https://github.com/tsathler/glpi-propostas/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/tsathler/glpi-propostas/compare/v1.4.1...v1.4.2
