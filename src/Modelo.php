@@ -133,11 +133,11 @@ class Modelo extends CommonDBTM
      * Copia itens e blocos do modelo para a proposta.
      *
      * @param array<int|string, mixed> $valores valor digitado na criação, por id do item do modelo
-     * @param float|null $desconto desconto (%) para todos os itens; null mantém o de cada item
+     * @param array<int|string, mixed> $descontos desconto (%) digitado na criação, por id do item do modelo
      */
-    public function copiarParaProposta(int $propostas_id, array $valores = [], ?float $desconto = null): void
+    public function copiarParaProposta(int $propostas_id, array $valores = [], array $descontos = []): void
     {
-        foreach (Calculo::itensDaCopia(ModeloItem::getItensDoModelo($this->getID()), $valores, $desconto) as $item) {
+        foreach (Calculo::itensDaCopia(ModeloItem::getItensDoModelo($this->getID()), $valores, $descontos) as $item) {
             (new PropostaItem())->add([
                 PropostaItem::$items_id => $propostas_id,
                 'tipo'                  => $item['tipo'],

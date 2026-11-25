@@ -67,37 +67,45 @@ final class ModeloValoresTest extends TestCase
 
     public function testCopiaSemValoresNemDescontoMantemOModelo(): void
     {
-        self::assertSame(self::itensModelo(), Calculo::itensDaCopia(self::itensModelo(), [], null));
+        self::assertSame(self::itensModelo(), Calculo::itensDaCopia(self::itensModelo(), [], []));
     }
 
     public function testValorDigitadoSubstituiOModelo(): void
     {
-        $copia = Calculo::itensDaCopia(self::itensModelo(), [1 => '150,00', 2 => '', 3 => 'abc'], null);
+        $copia = Calculo::itensDaCopia(self::itensModelo(), [1 => '150,00', 2 => '', 3 => 'abc'], []);
 
         self::assertSame(150.0, $copia[0]['valor_unitario']);
         self::assertSame('200.0000', $copia[1]['valor_unitario'], 'vazio mantém o modelo');
         self::assertSame('50.0000', $copia[2]['valor_unitario'], 'inválido mantém o modelo');
-        self::assertSame('2.00', $copia[1]['desconto_pct'], 'sem desconto especial, mantém o do item');
+        self::assertSame('2.00', $copia[1]['desconto_pct'], 'sem desconto digitado, mantém o do item');
     }
 
-    public function testDescontoEspecialValeParaTodosOsItens(): void
+    public function testDescontoPorItem(): void
     {
-        $copia = Calculo::itensDaCopia(self::itensModelo(), ['2' => '210.00'], 5.0);
+        $copia = Calculo::itensDaCopia(self::itensModelo(), ['2' => '210.00'], [1 => '5', 2 => '7,5', 3 => '']);
 
-        self::assertSame([5.0, 5.0, 5.0], array_column($copia, 'desconto_pct'));
-        self::assertSame(199.5, Calculo::subtotal(1, $copia[1]['valor_unitario'], $copia[1]['desconto_pct']));
+        self::assertSame(5.0, $copia[0]['desconto_pct']);
+        self::assertSame(7.5, $copia[1]['desconto_pct']);
+        self::assertSame('0.00', $copia[2]['desconto_pct'], 'vazio mantém o do modelo');
         self::assertSame(95.0, Calculo::subtotal(1, $copia[0]['valor_unitario'], $copia[0]['desconto_pct']));
+        self::assertSame(194.25, Calculo::subtotal(1, $copia[1]['valor_unitario'], $copia[1]['desconto_pct']));
     }
 
-    public function testDescontoDaCriacao(): void
+    public function testDescontoPorItemZeroELimite(): void
     {
-        self::assertNull(Calculo::descontoDaCriacao(false, '8', 5.0), 'opção desmarcada');
-        self::assertSame(8.0, Calculo::descontoDaCriacao(true, '8', 5.0), 'digitado vale no lugar do sugerido');
-        self::assertSame(7.5, Calculo::descontoDaCriacao(true, '7,5', 5.0));
-        self::assertSame(5.0, Calculo::descontoDaCriacao(true, '', 5.0), 'vazio usa o sugerido');
-        self::assertSame(5.0, Calculo::descontoDaCriacao(true, null, 5.0));
-        self::assertNull(Calculo::descontoDaCriacao(true, '0', 5.0), 'zero = sem desconto');
-        self::assertNull(Calculo::descontoDaCriacao(true, '', 0.0), 'sem sugerido e sem digitado');
-        self::assertSame(100.0, Calculo::descontoDaCriacao(true, '150', 5.0), 'limite de 100%');
+        $copia = Calculo::itensDaCopia(self::itensModelo(), [], [2 => '0', 3 => '150', 1 => 'abc']);
+
+        self::assertSame('0.00', $copia[0]['desconto_pct'], 'inválido mantém o do modelo');
+        self::assertSame(0.0, $copia[1]['desconto_pct'], 'zero tira o desconto do modelo');
+        self::assertSame(100.0, $copia[2]['desconto_pct'], 'limite de 100%');
+    }
+
+    public function testNomeAutomatico(): void
+    {
+        self::assertSame('Plano B – Empresa Exemplo Ltda', Calculo::nomeAutomatico('Plano B', 'Empresa Exemplo Ltda'));
+        self::assertSame('Empresa Exemplo Ltda', Calculo::nomeAutomatico('', ' Empresa Exemplo Ltda '));
+        self::assertSame('Plano B', Calculo::nomeAutomatico('Plano B', ''));
+        self::assertSame('Proposta', Calculo::nomeAutomatico('', ''));
+        self::assertSame(255, mb_strlen(Calculo::nomeAutomatico(str_repeat('a', 200), str_repeat('b', 200))));
     }
 }

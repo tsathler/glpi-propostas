@@ -41,6 +41,7 @@ $itens = array_map(
         'tipo'  => $item['tipo'] === Calculo::TIPO_PONTUAL ? Calculo::TIPO_PONTUAL : Calculo::TIPO_RECORRENTE,
         'nome'  => (string) $item['name'],
         'valor' => round((float) $item['valor_unitario'], 2),
+        'desconto' => round((float) $item['desconto_pct'], 2),
     ],
     ModeloItem::getItensDoModelo($modelo->getID())
 );

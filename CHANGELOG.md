@@ -5,6 +5,18 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-25
+
+### Added
+
+- Opção "Pedir o nome da proposta" (Configuração > Plug-ins > Propostas, padrão: ligada). Desligada, o campo Nome sai do formulário e o nome é gerado sozinho como "{modelo} – {razão social}", acompanhando a razão social. Ligada, um nome em branco também é gerado assim, em vez de a proposta ficar sem título.
+- Opção "Permitir editar as condições comerciais na proposta" (mesma tela, padrão: ligada). Desligada, o campo Condições comerciais sai do formulário da proposta: ela leva só o texto do modelo, mostrado para leitura, e o servidor ignora o campo se ele vier na requisição. O texto continua editável no modelo.
+
+### Changed
+
+- Desconto por item no quadro "Valores desta proposta": cada item tem o seu campo de desconto (%), que vem com o desconto do item no modelo. Sai a opção "Aplicar desconto a todos os itens"; o desconto sugerido do modelo vira uma dica com o botão "Usar X% em todos", que só preenche os campos quando clicado.
+- Campo Consultor: para quem só tem o nível *Ler as próprias*, que só pode ser consultor das próprias propostas, o campo vira um texto fixo com o nome da pessoa, sem menu.
+
 ## [1.5.1] - 2026-11-25
 
 ### Changed
@@ -194,7 +206,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/tsathler/glpi-propostas/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/tsathler/glpi-propostas/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/tsathler/glpi-propostas/compare/v1.4.3...v1.5.0
 [1.4.3]: https://github.com/tsathler/glpi-propostas/compare/v1.4.2...v1.4.3
