@@ -5,6 +5,12 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-11-25
+
+### Changed
+
+- Formulário da proposta: "Comentários" sai do topo e vai para o fim, em largura total, como anotação interna (o cliente não vê). Sem o campo Nome, o formulário abre pelo modelo (na criação) ou pelo número (na edição), em vez de uma caixa de comentário com o modelo na outra coluna.
+
 ## [1.7.1] - 2026-11-25
 
 ### Changed
@@ -230,7 +236,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.1...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.7.2...HEAD
+[1.7.2]: https://github.com/tsathler/glpi-propostas/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/tsathler/glpi-propostas/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/tsathler/glpi-propostas/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/tsathler/glpi-propostas/compare/v1.5.1...v1.6.0
