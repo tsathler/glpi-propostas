@@ -136,6 +136,13 @@ function plugin_propostas_install(): bool
         'state'   => CronTask::STATE_WAITING,
     ]);
 
+    // 1.8.0: ação automática diária que apaga IP e navegador antigos (LGPD).
+    CronTask::register('GlpiPlugin\\Propostas\\Acesso', 'limpar', DAY_TIMESTAMP, [
+        'comment' => 'Apaga IP e navegador de acessos e dúvidas com mais de 180 dias (LGPD)',
+        'mode'    => CronTask::MODE_EXTERNAL,
+        'state'   => CronTask::STATE_WAITING,
+    ]);
+
     // 0.3.0: notificações para o consultor (aberta, aceita, dúvida). Só cria o que não existir.
     GlpiPlugin\Propostas\NotificationTargetProposta::instalar();
 
@@ -435,7 +442,7 @@ function plugin_propostas_uninstall(): bool
         'url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url', 'chamado_itilcategories_id', 'chamado_groups_id',
         'instalado_notificacoes', 'instalado_colunas_1_1',
         'equipes_groups_id', 'propostas_entities_id', 'instalado_niveis_leitura', 'instalado_notificacoes_equipes',
-        'marca_cor_principal', 'marca_cor_destaque', 'marca_rodape', 'campo_nome_ativo', 'campo_condicoes_ativo',
+        'marca_cor_principal', 'marca_cor_destaque', 'marca_rodape', 'campo_nome_ativo', 'campo_condicoes_ativo', 'aviso_privacidade',
     ]);
     // Logotipo da página do cliente (pasta de arquivos do plugin).
     GlpiPlugin\Propostas\Marca::removerLogo();

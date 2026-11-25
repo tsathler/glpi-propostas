@@ -62,7 +62,8 @@
    {% endif %}
    {% if p.aceite %}
       <div class="faixa ok" role="status">
-         <strong>Proposta aceita</strong> em {{ p.aceite.data }} por {{ p.aceite.nome }}{% if p.aceite.cargo %} ({{ p.aceite.cargo }}){% endif %}.
+         {# Sem nome e cargo de quem aceitou: o link pode ser repassado (LGPD). Estão na aba Respostas do GLPI. #}
+         <strong>Proposta aceita</strong> em {{ p.aceite.data }}.
          Código de verificação: <code>{{ p.aceite.codigo }}</code>
       </div>
    {% endif %}
@@ -234,6 +235,7 @@
                      <strong>{{ p.empresa.razao_social }}</strong>, CNPJ {{ p.empresa.cnpj }}, e que li e concordo
                      com as condições desta proposta.</span>
                </label>
+               <p class="nota">{{ marca.privacidade }}</p>
                <button type="submit" class="botao primario">Confirmar aceite</button>
             </form>
          </details>

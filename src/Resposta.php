@@ -106,8 +106,8 @@ class Resposta extends CommonGLPI
             return false;
         }
 
-        // CPF completo só para quem pode alterar a proposta; os outros veem a máscara.
-        $ver_cpf = $item->can($item->getID(), UPDATE);
+        // CPF completo só para quem gerencia modelos e blocos (a supervisão); os outros veem a máscara.
+        $ver_cpf = Session::haveRight(PLUGIN_PROPOSTAS_RIGHT_MODELO, UPDATE);
         $linhas = [];
         foreach (self::getDaProposta($item->getID()) as $row) {
             $cpf = $row['cpf_mascarado'];

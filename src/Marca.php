@@ -107,19 +107,28 @@ final class Marca
      * Texto do rodapé: uma linha de texto puro (sem quebras e espaços repetidos), cortado no limite.
      * O template escapa o HTML na exibição.
      */
-    public static function textoRodape(mixed $valor): string
+    public static function textoRodape(mixed $valor, int $maximo = self::RODAPE_MAXIMO): string
     {
         $texto = trim((string) preg_replace('/\s+/u', ' ', (string) $valor));
 
-        return mb_substr($texto, 0, self::RODAPE_MAXIMO);
+        return mb_substr($texto, 0, $maximo);
+    }
+
+    /** Tamanho máximo do aviso de privacidade. */
+    public const PRIVACIDADE_MAXIMO = 1000;
+
+    /** Aviso de privacidade padrão do formulário de aceite (quando a configuração está em branco). */
+    public static function privacidadePadrao(): string
+    {
+        return __('Nome, CPF e cargo, com data, hora, IP e navegador, ficam registrados como comprovação do aceite desta proposta. O CPF é guardado cifrado e aparece mascarado para a equipe comercial.', 'propostas');
     }
 
     /**
-     * @return array{logo: ?string, cor_principal: string, cor_destaque: string, cor_destaque_forte: string, rodape: string, decoracao: list<string>}
+     * @return array{logo: ?string, cor_principal: string, cor_destaque: string, cor_destaque_forte: string, rodape: string, privacidade: string, decoracao: list<string>}
      */
     public static function dadosPublicos(): array
     {
-        $config = \Config::getConfigurationValues('plugin:propostas', ['marca_cor_principal', 'marca_cor_destaque', 'marca_rodape']);
+        $config = \Config::getConfigurationValues('plugin:propostas', ['marca_cor_principal', 'marca_cor_destaque', 'marca_rodape', 'aviso_privacidade']);
         $principal = self::corValida($config['marca_cor_principal'] ?? null) ?? self::COR_PRINCIPAL_PADRAO;
         $destaque  = self::corValida($config['marca_cor_destaque'] ?? null) ?? self::COR_DESTAQUE_PADRAO;
 
@@ -131,6 +140,7 @@ final class Marca
             // Botões e textos na cor de destaque: a versão legível (a original continua nos detalhes).
             'cor_destaque_forte' => self::legivelComBranco($destaque),
             'rodape'        => self::textoRodape($config['marca_rodape'] ?? ''),
+            'privacidade'   => self::textoRodape($config['aviso_privacidade'] ?? '', self::PRIVACIDADE_MAXIMO) ?: self::privacidadePadrao(),
             'decoracao'     => self::decoracaoDataUris(),
         ];
     }
