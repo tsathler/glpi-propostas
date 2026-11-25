@@ -435,7 +435,7 @@ function plugin_propostas_uninstall(): bool
         'url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url', 'chamado_itilcategories_id', 'chamado_groups_id',
         'instalado_notificacoes', 'instalado_colunas_1_1',
         'equipes_groups_id', 'propostas_entities_id', 'instalado_niveis_leitura', 'instalado_notificacoes_equipes',
-        'marca_cor_principal', 'marca_cor_destaque', 'marca_rodape',
+        'marca_cor_principal', 'marca_cor_destaque', 'marca_rodape', 'campo_nome_ativo', 'campo_condicoes_ativo',
     ]);
     // Logotipo da página do cliente (pasta de arquivos do plugin).
     GlpiPlugin\Propostas\Marca::removerLogo();

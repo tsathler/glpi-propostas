@@ -135,6 +135,23 @@
       {% endfor %}
 
       <hr>
+      <h4>{{ __('Formulário da proposta', 'propostas') }}</h4>
+      <div class="mb-2 form-check form-switch">
+         <input class="form-check-input" type="checkbox" id="campo_nome_ativo" name="campo_nome_ativo" value="1" {{ campo_nome_ativo ? 'checked' }}>
+         <label class="form-check-label" for="campo_nome_ativo">{{ __('Pedir o nome da proposta', 'propostas') }}</label>
+      </div>
+      <div class="form-hint mb-3">
+         {{ __('Desligado, o campo Nome sai do formulário e o nome é gerado sozinho: "{modelo} – {razão social}", atualizado quando a razão social muda. Ligado, o nome em branco também é gerado assim.', 'propostas') }}
+      </div>
+      <div class="mb-2 form-check form-switch">
+         <input class="form-check-input" type="checkbox" id="campo_condicoes_ativo" name="campo_condicoes_ativo" value="1" {{ campo_condicoes_ativo ? 'checked' }}>
+         <label class="form-check-label" for="campo_condicoes_ativo">{{ __('Permitir editar as condições comerciais na proposta', 'propostas') }}</label>
+      </div>
+      <div class="form-hint mb-3">
+         {{ __('Desligado, o campo Condições comerciais sai do formulário da proposta: ela leva só o texto do modelo, mostrado para leitura. O texto continua editável no modelo, por quem gerencia modelos.', 'propostas') }}
+      </div>
+
+      <hr>
       <h4>{{ __('Entidade padrão das propostas', 'propostas') }}</h4>
       <div class="mb-2 form-check form-switch">
          <input class="form-check-input" type="checkbox" id="entidade_padrao_ativa" name="entidade_padrao_ativa" value="1" {{ entidade_padrao_ativa ? 'checked' }}>

@@ -53,6 +53,8 @@ if (isset($_POST['update'])) {
             'marca_cor_principal'       => (string) Marca::corValida($cor_principal),
             'marca_cor_destaque'        => (string) Marca::corValida($cor_destaque),
             'marca_rodape'              => Marca::textoRodape($_POST['marca_rodape'] ?? ''),
+            'campo_nome_ativo'          => !empty($_POST['campo_nome_ativo']) ? '1' : '0',
+            'campo_condicoes_ativo'     => !empty($_POST['campo_condicoes_ativo']) ? '1' : '0',
         ]);
         if (!empty($_POST['remover_logo'])) {
             Marca::removerLogo();
@@ -75,7 +77,8 @@ Html::header(__('Propostas', 'propostas'), '', 'config', 'plugin');
 
 $config = Config::getConfigurationValues('plugin:propostas', [
     'url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url', 'chamado_itilcategories_id', 'chamado_groups_id',
-    'equipes_groups_id', 'propostas_entities_id', 'marca_cor_principal', 'marca_cor_destaque', 'marca_rodape',
+    'equipes_groups_id', 'propostas_entities_id', 'marca_cor_principal', 'marca_cor_destaque', 'marca_rodape', 'campo_nome_ativo',
+    'campo_condicoes_ativo',
 ]);
 $entidade_padrao = (int) ($config['propostas_entities_id'] ?? -1);
 TemplateRenderer::getInstance()->display('@propostas/config.html.twig', [
@@ -100,6 +103,8 @@ TemplateRenderer::getInstance()->display('@propostas/config.html.twig', [
     'marca_logo'                => Marca::logoDataUri(),
     'marca_rodape'              => (string) ($config['marca_rodape'] ?? ''),
     'marca_rodape_maximo'       => Marca::RODAPE_MAXIMO,
+    'campo_nome_ativo'          => (string) ($config['campo_nome_ativo'] ?? '1') !== '0',
+    'campo_condicoes_ativo'     => (string) ($config['campo_condicoes_ativo'] ?? '1') !== '0',
 ]);
 
 Html::footer();

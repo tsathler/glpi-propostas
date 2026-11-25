@@ -86,24 +86,25 @@ final class Calculo
     }
 
     /**
-     * Itens do modelo como vão para a proposta: o valor digitado (quando válido) substitui o do
-     * modelo, e o desconto especial, quando aplicado, vale para todos os itens.
+     * Itens do modelo como vão para a proposta: o valor e o desconto (%) digitados para cada item
+     * (quando válidos) substituem os do modelo; vazio ou inválido mantém o do modelo.
      *
      * @param list<array<string, mixed>> $itens_modelo linhas de ModeloItem (com id)
      * @param array<int|string, mixed> $valores valor digitado por id do item do modelo
-     * @param float|null $desconto_especial null = manter o desconto de cada item
+     * @param array<int|string, mixed> $descontos desconto (%) digitado por id do item do modelo
      * @return list<array<string, mixed>>
      */
-    public static function itensDaCopia(array $itens_modelo, array $valores, ?float $desconto_especial): array
+    public static function itensDaCopia(array $itens_modelo, array $valores, array $descontos = []): array
     {
         $copia = [];
         foreach ($itens_modelo as $item) {
-            $digitado = self::lerValor($valores[(int) ($item['id'] ?? 0)] ?? null);
+            $id = (int) ($item['id'] ?? 0);
+            $digitado = self::lerValor($valores[$id] ?? null);
             if ($digitado !== null) {
                 $item['valor_unitario'] = $digitado;
             }
-            if ($desconto_especial !== null) {
-                $item['desconto_pct'] = $desconto_especial;
+            if (self::lerValor($descontos[$id] ?? null) !== null) {
+                $item['desconto_pct'] = self::percentual($descontos[$id]);
             }
             $copia[] = $item;
         }
@@ -112,17 +113,14 @@ final class Calculo
     }
 
     /**
-     * Desconto escolhido na criação da proposta: só com a opção marcada. O percentual digitado vale
-     * no lugar do sugerido pelo modelo; vazio usa o sugerido. Zero ou nada = sem desconto (null).
+     * Nome da proposta quando não é digitado: "{modelo} – {razão social}", com o que houver;
+     * sem nenhum dos dois, "Proposta".
      */
-    public static function descontoDaCriacao(bool $aplicar, mixed $digitado, float $sugerido): ?float
+    public static function nomeAutomatico(string $modelo, string $empresa): string
     {
-        if (!$aplicar) {
-            return null;
-        }
-        $pct = self::lerValor($digitado) === null ? self::percentual($sugerido) : self::percentual($digitado);
+        $partes = array_values(array_filter([trim($modelo), trim($empresa)], static fn (string $p): bool => $p !== ''));
 
-        return $pct > 0 ? $pct : null;
+        return $partes === [] ? 'Proposta' : mb_substr(implode(' – ', $partes), 0, 255);
     }
 
     /** Formato do hash gravado nos aceites novos. O formato 1 continua valendo para os antigos. */

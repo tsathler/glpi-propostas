@@ -7,3 +7,4 @@
 .vscode/
 *.tgz
 *.tar.gz
+/.phpunit.result.cache

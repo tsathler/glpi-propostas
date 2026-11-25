@@ -164,6 +164,9 @@ class Proposta extends CommonDBTM
     /** Ligado só por atualizarInterno(): libera os campos internos e a proposta travada. */
     private bool $acao_interna = false;
 
+    /** Duplicação: a cópia leva as condições da proposta original, mesmo sem o campo no formulário. */
+    private bool $copia_de_proposta = false;
+
     /**
      * Update feito pelas ações do próprio plugin (link, reabrir, cancelar, respostas, cron).
      *
@@ -220,6 +223,10 @@ class Proposta extends CommonDBTM
         // Proposta nova nasce sem chamado: o plugin abre um ao gerar o link. Vincular um
         // chamado existente só depois da criação, pelo formulário da proposta.
         unset($input['tickets_id']);
+        // Sem o campo na configuração, as condições vêm só do modelo.
+        if (!self::pedeCondicoes() && !$this->copia_de_proposta) {
+            unset($input['condicoes']);
+        }
         if (empty($input['data_emissao'])) {
             $input['data_emissao'] = date('Y-m-d');
         }
@@ -265,7 +272,59 @@ class Proposta extends CommonDBTM
             return false;
         }
 
-        return $this->validarEmpresa($input);
+        $input = $this->validarEmpresa($input);
+
+        return $input === false ? false : $this->aplicarNome($input);
+    }
+
+    /** O formulário pede o nome da proposta? (Configuração; padrão: sim.) */
+    public static function pedeNome(): bool
+    {
+        return (string) (\Config::getConfigurationValue('plugin:propostas', 'campo_nome_ativo') ?? '1') !== '0';
+    }
+
+    /**
+     * O formulário da proposta mostra o campo Condições comerciais para edição? (Configuração; padrão: sim.)
+     * Desligado, a proposta só leva o texto do modelo.
+     */
+    public static function pedeCondicoes(): bool
+    {
+        return (string) (\Config::getConfigurationValue('plugin:propostas', 'campo_condicoes_ativo') ?? '1') !== '0';
+    }
+
+    /**
+     * Sem o campo Nome no formulário, o nome sai sozinho ("{modelo} – {razão social}") e acompanha
+     * a razão social. Com o campo, só preenche quando ele vem em branco.
+     *
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    private function aplicarNome(array $input): array
+    {
+        $digitado = array_key_exists('name', $input) ? trim((string) $input['name']) : null;
+        if (self::pedeNome() && $digitado !== '' && ($digitado !== null || !$this->isNewItem())) {
+            return $input;
+        }
+
+        $modelos_id = (int) ($input['plugin_propostas_modelos_id'] ?? $this->fields['plugin_propostas_modelos_id'] ?? 0);
+        $modelo = new Modelo();
+        $nome_modelo = $modelos_id > 0 && $modelo->getFromDB($modelos_id) ? (string) $modelo->fields['name'] : '';
+        $empresa = (string) ($input['empresa_razao_social'] ?? $this->fields['empresa_razao_social'] ?? '');
+        $input['name'] = Calculo::nomeAutomatico($nome_modelo, $empresa);
+
+        return $input;
+    }
+
+    /**
+     * Sem o campo Nome na configuração, ele sai do formulário (o nome é gerado sozinho).
+     *
+     * @return array<int|string, string>
+     */
+    public function getFormFields(): array
+    {
+        $campos = parent::getFormFields();
+
+        return self::pedeNome() ? $campos : array_values(array_filter($campos, static fn ($c): bool => $c !== 'name'));
     }
 
     public function post_addItem(): void
@@ -274,16 +333,13 @@ class Proposta extends CommonDBTM
         if ($modelos_id > 0 && empty($this->input['_sem_copiar_modelo'])) {
             $modelo = new Modelo();
             if ($modelo->getFromDB($modelos_id)) {
-                // Campos mostrados ao escolher o modelo: valor de cada item e o desconto (%).
-                $valores = $this->input['_modelo_valores'] ?? [];
+                // Campos mostrados ao escolher o modelo: valor e desconto (%) de cada item.
+                $valores   = $this->input['_modelo_valores'] ?? [];
+                $descontos = $this->input['_modelo_descontos'] ?? [];
                 $modelo->copiarParaProposta(
                     $this->getID(),
                     is_array($valores) ? $valores : [],
-                    Calculo::descontoDaCriacao(
-                        !empty($this->input['_aplicar_desconto']),
-                        $this->input['_desconto_pct'] ?? null,
-                        $modelo->getDescontoEspecial()
-                    )
+                    is_array($descontos) ? $descontos : []
                 );
             }
         }
@@ -340,6 +396,10 @@ class Proposta extends CommonDBTM
         }
         // O modelo de origem não muda depois da criação.
         unset($input['plugin_propostas_modelos_id']);
+        // Sem o campo na configuração, as condições ficam as do modelo.
+        if (!self::pedeCondicoes()) {
+            unset($input['condicoes']);
+        }
         if (array_key_exists('exibicao', $input)) {
             $input['exibicao'] = Calculo::exibicaoValida($input['exibicao']);
         }
@@ -370,7 +430,9 @@ class Proposta extends CommonDBTM
             return false;
         }
 
-        return $this->validarEmpresa($input);
+        $input = $this->validarEmpresa($input);
+
+        return $input === false ? false : $this->aplicarNome($input);
     }
 
     /**
@@ -476,8 +538,13 @@ class Proposta extends CommonDBTM
             'cnpj_consulta' => (bool) (\Config::getConfigurationValue('plugin:propostas', 'cnpj_consulta_ativa') ?? false),
             'cnpj_url'      => \Plugin::getWebDir('propostas') . '/ajax/cnpj.php',
             'consultores'   => $this->opcoesConsultor(),
+            // Só "Ler as próprias": o consultor é sempre o próprio usuário, então o campo vira texto fixo.
+            'consultor_fixo' => (Equipe::direitosAtuais() & (Visibilidade::EQUIPE | Visibilidade::TODAS)) === 0,
+            'consultor_id'   => $consultor_id = (int) ($this->fields['users_id_consultor'] ?: Session::getLoginUserID()),
+            'consultor_nome' => getUserName($consultor_id),
             'modelo_url'    => \Plugin::getWebDir('propostas') . '/ajax/modelo.php',
             'exibicoes'     => Modelo::getOpcoesExibicao(),
+            'pede_condicoes' => self::pedeCondicoes(),
         ]);
 
         return true;
@@ -655,6 +722,7 @@ class Proposta extends CommonDBTM
     public function duplicar(): int|false
     {
         $nova = new self();
+        $nova->copia_de_proposta = true;
         $entidade = $this->entidadeDeTrabalho();
         $id = $nova->add([
             'entities_id'        => $entidade,

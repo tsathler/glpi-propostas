@@ -12,7 +12,7 @@
       min: 0,
       max: 100,
       step: 0.01,
-      helper: __('Vem preenchido no campo de desconto da proposta nova. O consultor decide se aplica e pode mudar o percentual.', 'propostas')
+      helper: __('Na proposta nova, aparece como dica, com o botão "Usar X% em todos", que preenche o desconto de cada item. O consultor ainda pode mudar item a item.', 'propostas')
    }) }}
    {{ fields.dropdownArrayField('exibicao', item.fields['exibicao'], exibicoes, __('Valores na página do cliente', 'propostas'), {
       helper: __('Preço por unidade: para valores cobrados por pessoa ou por unidade (ex.: por participante ativo por mês). Mostra cada preço, com o valor de antes quando há desconto, e não soma totais.', 'propostas')
