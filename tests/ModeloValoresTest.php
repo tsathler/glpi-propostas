@@ -57,6 +57,8 @@ final class ModeloValoresTest extends TestCase
         self::assertSame('1234.56', Calculo::normalizarNumero('1.234,56'));
         self::assertSame('0.125', Calculo::normalizarNumero('0.125'));
         self::assertSame('abc', Calculo::normalizarNumero('abc'), 'não valida: a validação recusa depois');
+        self::assertSame('1,234.56', Calculo::normalizarNumero('1,234.56'), 'formato americano segue como veio');
+        self::assertFalse(is_numeric(Calculo::normalizarNumero('1,234.56')), 'e a validação recusa');
     }
 
     #[DataProvider('valores')]

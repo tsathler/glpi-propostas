@@ -6,6 +6,7 @@
  * Rotas: GET  /plugins/propostas/p/{token}
  *        POST /plugins/propostas/p/{token}/aceitar
  *        POST /plugins/propostas/p/{token}/duvida
+ *        GET  /plugins/propostas/p/{token}/csrf (token anti-falsificação novo, pedido pela página antes de enviar)
  *        qualquer outro /plugins/propostas/p/... -> aviso "Proposta não encontrada" (404)
  * Para acesso externo, exponha só estas rotas (exemplo de Nginx no README).
  * Os POST passam pela checagem de CSRF do próprio GLPI (campo _glpi_csrf_token).
@@ -21,6 +22,8 @@ use Glpi\Security\Attribute\SecurityStrategy;
 use GlpiPlugin\Propostas\Marca;
 use GlpiPlugin\Propostas\Origem;
 use GlpiPlugin\Propostas\Proposta;
+use GlpiPlugin\Propostas\Acesso;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -48,14 +51,14 @@ final class PublicController extends AbstractController
             return $indisponivel;
         }
 
-        $proposta->registrarVisualizacao((string) $request->getClientIp(), (string) $request->headers->get('User-Agent', ''));
+        // Prévia de link (WhatsApp, Teams, Slack...) não é o cliente abrindo a proposta.
+        $user_agent = (string) $request->headers->get('User-Agent', '');
+        if (!Acesso::ehRobo($user_agent)) {
+            $proposta->registrarVisualizacao((string) $request->getClientIp(), $user_agent);
+        }
 
         return $this->paginaProposta($proposta, $token, [
-            'sucesso' => match ($request->query->get('ok')) {
-                'aceite' => 'aceite',
-                'duvida' => 'duvida',
-                default  => null,
-            },
+            'sucesso' => $request->query->get('ok') === 'duvida' ? 'duvida' : null,
         ]);
     }
 
@@ -95,6 +98,22 @@ final class PublicController extends AbstractController
         }
 
         return new RedirectResponse($this->caminho($token) . '?ok=aceite', Response::HTTP_SEE_OTHER);
+    }
+
+    /**
+     * Token anti-falsificação novo. O da página fica na sessão, que expira com 24 minutos parada: o
+     * cliente que lê com calma e depois aceita levaria um "ação não permitida" do GLPI. A página pede
+     * este antes de enviar; sem sessão, esta requisição abre uma nova.
+     */
+    #[Route('/p/{token}/csrf', name: 'proposta_csrf', requirements: ['token' => self::TOKEN])]
+    #[SecurityStrategy(Firewall::STRATEGY_NO_CHECK)]
+    public function csrf(string $token): Response
+    {
+        if (Proposta::buscarPorToken($token) === null) {
+            return new JsonResponse(null, Response::HTTP_NOT_FOUND);
+        }
+
+        return new JsonResponse(['token' => \Session::getNewCSRFToken()], Response::HTTP_OK, ['Cache-Control' => 'no-store, private']);
     }
 
     // Sem "methods": ver o comentário de aceitar().
@@ -224,6 +243,7 @@ final class PublicController extends AbstractController
             // Com a âncora, a página devolvida com erro abre no quadro de decisão, onde fica o aviso.
             'acao_aceite' => $this->caminho($token) . '/aceitar#responder',
             'acao_duvida' => $this->caminho($token) . '/duvida#responder',
+            'acao_csrf'   => $this->caminho($token) . '/csrf',
             'form_aberto' => null,
             'erros'       => [],
             'valores'     => [],

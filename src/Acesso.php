@@ -61,6 +61,16 @@ class Acesso extends CommonGLPI
         return self::retencaoValida($dias) ? (int) $dias : self::RETENCAO_PADRAO;
     }
 
+    /**
+     * Robô que abre o link sozinho: prévia de mensageiro (WhatsApp, Teams, Slack, Telegram...) ou buscador.
+     * shortcut: lista de nomes conhecidos; o filtro de links do Outlook se passa por navegador e não é pego.
+     */
+    public static function ehRobo(string $user_agent): bool
+    {
+        return trim($user_agent) === ''
+            || preg_match('/whatsapp|facebookexternalhit|facebot|skypeuripreview|microsoftpreview|slackbot|slack-imgproxy|telegrambot|twitterbot|linkedinbot|discordbot|googlebot|bingbot|applebot|duckduckbot|yandexbot|curl\/|wget\//i', $user_agent) === 1;
+    }
+
     public static function cronInfo($name)
     {
         if ($name === 'limpar') {
