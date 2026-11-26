@@ -466,6 +466,9 @@ class Proposta extends CommonDBTM
         if (!self::conferirValidade($input)) {
             return false;
         }
+        if (array_key_exists('users_id_consultor', $input) && (int) $input['users_id_consultor'] <= 0) {
+            unset($input['users_id_consultor']);
+        }
         // Mudar a entidade (ou a recursividade) só para uma entidade a que a pessoa tem acesso.
         if (array_key_exists('entities_id', $input) && (int) $input['entities_id'] !== (int) $this->fields['entities_id']
             && !Session::haveAccessToEntity((int) $input['entities_id'])) {

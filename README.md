@@ -48,10 +48,10 @@ sudo -u www-data php bin/console cache:clear
 
 - **Token:** 32 bytes aleatórios (base64url, 43 caracteres). O banco guarda o SHA-256 do token, usado na busca, e uma cópia cifrada com a chave do GLPI, que permite ao consultor copiar o link de novo.
 - **Validade:** o link vale até as 23:59:59 do último dia de validade. Link vencido responde 410; token inexistente ou revogado responde 404.
-- **Proteção dos envios:** o GLPI confere o token anti-falsificação (CSRF). O limite é de 10 envios por IP (ou rede /64 do IPv6) por hora, sem contar envios recusados pela validação, e de 5 dúvidas por proposta a cada 24 horas. O banco guarda só o hash do IP.
+- **Proteção dos envios:** o GLPI confere o token anti-falsificação (CSRF). Antes de enviar, a página pede um token novo (`/csrf`), para o envio não falhar quando a sessão expira com a página aberta. O limite é de 20 envios por IP (ou rede /64 do IPv6) por hora, contando também os recusados pela validação, e de 5 dúvidas por proposta a cada 24 horas. O banco guarda só o hash do IP.
 - **Respostas simultâneas:** aceite, dúvida e as ações do consultor travam a proposta no banco, então duas respostas ao mesmo tempo não geram aceite duplo nem aceite numa versão reaberta.
 - **Quem vê o link:** só quem pode editar a proposta vê e copia o link; quem só lê vê que ele foi enviado e a validade.
-- **CPF:** guardado cifrado, mais uma versão mascarada (`***.456.789-**`). O CPF completo só aparece para quem pode editar a proposta.
+- **CPF:** guardado cifrado, mais uma versão mascarada (`***.456.789-**`). O CPF completo só aparece para quem gerencia modelos e blocos (a supervisão); os outros veem a máscara.
 - **Código de verificação:** é o SHA-256 de número, versão, título, datas, condições, itens e totais e, desde a versão 1.1.0 (formato 2), também da empresa (razão social e CNPJ), dos blocos de texto e do cargo de quem aceitou. Cada aceite guarda o formato em que foi calculado, e a aba Respostas confere cada um no próprio formato.
 - **Cabeçalhos:** a página envia `X-Robots-Tag: noindex`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer` e `X-Frame-Options: DENY`.
 
@@ -67,7 +67,7 @@ server {
 
     root /caminho/do/glpi/public;
 
-    location ~ ^/plugins/propostas/p/[A-Za-z0-9_-]{43}(/(aceitar|duvida))?$ {
+    location ~ ^/plugins/propostas/p/[A-Za-z0-9_-]{43}(/(aceitar|duvida|csrf))?$ {
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root/index.php;
         fastcgi_pass unix:/run/php/php-fpm.sock;   # ajuste para o seu PHP-FPM

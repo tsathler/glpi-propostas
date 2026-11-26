@@ -5,6 +5,19 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-11-26
+
+### Fixed
+
+- **Aceite e dúvida com a página aberta por muito tempo:** antes de enviar, a página pede um token anti-falsificação novo. Antes, depois de 24 minutos parada, o GLPI recusava o envio com "ação não permitida" e o cliente perdia o que tinha digitado. Quem expõe o plugin por Nginx precisa liberar a rota `/csrf` (exemplo atualizado no README).
+- **Prévias de link** (WhatsApp, Teams, Slack, Telegram, buscadores) não contam mais como visualização do cliente nem disparam o aviso de proposta aberta.
+- **Consultor em branco ao editar** mantém o consultor atual; antes, gravava "ninguém" e a proposta sumia para quem não vê todas.
+- **"Gerar link" e "Duplicar"** salvam antes o que está na tela; antes, o link podia sair com a razão social ou o CNPJ antigos.
+- **Página do cliente, item com quantidade:** mostra "3 unidades: R$ 20,00" em vez de "3 × R$ 6,67 = R$ 20,00", conta que não fechava por causa do arredondamento por unidade.
+- **Número no formato americano** ("1,234.56") é recusado em vez de virar 1,23456.
+- **"Diferença" ao criar a proposta** conta a quantidade de cada item do modelo.
+- **README:** limite de envios e quem vê o CPF completo, como no código.
+
 ## [1.9.0] - 2026-11-26
 
 ### Added
@@ -304,7 +317,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.9.1...HEAD
+[1.9.1]: https://github.com/tsathler/glpi-propostas/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/tsathler/glpi-propostas/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/tsathler/glpi-propostas/compare/v1.7.5...v1.8.0
 [1.7.5]: https://github.com/tsathler/glpi-propostas/compare/v1.7.4...v1.7.5

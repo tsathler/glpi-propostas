@@ -96,7 +96,7 @@
                         {% if i.desconto %}<div class="de">de <s>{{ i.unitario }}</s> por</div>{% endif %}
                         <div class="valor">{{ i.final }}{% if mensal %} <small>/mês</small>{% endif %}</div>
                         {% if not i.quantidade_um %}
-                           <div class="qtd">{{ i.quantidade }} × {{ i.final }} = <strong>{{ i.subtotal }}</strong>{% if mensal %}/mês{% endif %}</div>
+                           <div class="qtd">{{ i.quantidade }} unidades: <strong>{{ i.subtotal }}</strong>{% if mensal %}/mês{% endif %}</div>
                         {% endif %}
                      </div>
                   </article>
@@ -273,6 +273,26 @@
             }
             cta.addEventListener('click', function () {
                if (painel) { painel.open = true; }
+            });
+         })();
+      </script>
+      <script>
+         /* Antes de enviar, troca o token anti-falsificação por um novo: o da página expira com a sessão
+            (24 min parada). Se a busca falhar, envia assim mesmo com o da página. */
+         (function () {
+            document.querySelectorAll('form.formulario').forEach(function (form) {
+               form.addEventListener('submit', function (evento) {
+                  if (form.dataset.renovado) { return; }
+                  evento.preventDefault();
+                  fetch({{ acao_csrf|json_encode|raw }}, {credentials: 'same-origin', cache: 'no-store'})
+                     .then(function (r) { return r.ok ? r.json() : null; })
+                     .catch(function () { return null; })
+                     .then(function (dados) {
+                        if (dados && dados.token) { form.elements._glpi_csrf_token.value = dados.token; }
+                        form.dataset.renovado = '1';
+                        form.submit();
+                     });
+               });
             });
          })();
       </script>

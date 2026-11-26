@@ -103,6 +103,11 @@ final class Calculo
     public static function normalizarNumero(string $texto): string
     {
         $texto = trim($texto);
+        // Ponto depois da última vírgula ("1,234.56", formato americano): não é brasileiro; segue como
+        // veio, para a validação recusar em vez de gravar 1,23456.
+        if (str_contains($texto, ',') && strrpos($texto, '.') > strrpos($texto, ',')) {
+            return $texto;
+        }
         if (str_contains($texto, ',')) {
             return str_replace(['.', ','], ['', '.'], $texto);
         }

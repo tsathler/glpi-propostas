@@ -42,6 +42,7 @@ $itens = array_map(
         'nome'  => (string) $item['name'],
         // Sem arredondar: o modelo guarda até 4 casas, e a proposta copia o valor como está.
         'valor' => (float) $item['valor_unitario'],
+        'quantidade' => (float) $item['quantidade'],
         'desconto' => round((float) $item['desconto_pct'], 2),
     ],
     ModeloItem::getItensDoModelo($modelo->getID())
