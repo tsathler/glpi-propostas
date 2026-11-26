@@ -5,6 +5,12 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-26
+
+### Added
+
+- **Prazo de guarda de IP e navegador configurável** em Configuração > Plug-ins > Propostas (de 1 a 3650 dias; padrão 180). A ação automática `limpar` usa o prazo configurado.
+
 ## [1.8.0] - 2026-11-25
 
 ### Added
@@ -298,7 +304,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/tsathler/glpi-propostas/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/tsathler/glpi-propostas/compare/v1.7.5...v1.8.0
 [1.7.5]: https://github.com/tsathler/glpi-propostas/compare/v1.7.4...v1.7.5
 [1.7.4]: https://github.com/tsathler/glpi-propostas/compare/v1.7.3...v1.7.4

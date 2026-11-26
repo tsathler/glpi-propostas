@@ -36,16 +36,35 @@ class Acesso extends CommonGLPI
     private const INTERVALO_MINUTOS = 10;
 
     /**
-     * Dias que o IP e o navegador de quem abre o link (e de quem manda dúvida) ficam guardados.
-     * Depois disso a linha fica só com a data. O aceite guarda os dele: são a prova do contrato.
-     * shortcut: prazo fixo no código, virar configuração se o encarregado de dados (DPO) pedir outro.
+     * Dias que o IP e o navegador de quem abre o link (e de quem manda dúvida) ficam guardados,
+     * configurável. Depois disso a linha fica só com a data. O aceite guarda os dele: são a prova do contrato.
      */
-    public const RETENCAO_DIAS = 180;
+    public const RETENCAO_PADRAO = 180;
+    public const RETENCAO_MINIMA = 1;
+    public const RETENCAO_MAXIMA = 3650;
+
+    /** Prazo de guarda dentro dos limites? Aceita "45" ou 45; o resto é inválido. */
+    public static function retencaoValida(mixed $dias): bool
+    {
+        $texto = trim((string) $dias);
+
+        return preg_match('/^\d+$/', $texto) === 1
+            && (int) $texto >= self::RETENCAO_MINIMA
+            && (int) $texto <= self::RETENCAO_MAXIMA;
+    }
+
+    /** Prazo configurado; sem configuração (ou inválido), o padrão. */
+    public static function retencaoDias(): int
+    {
+        $dias = \Config::getConfigurationValues('plugin:propostas', ['retencao_dias'])['retencao_dias'] ?? '';
+
+        return self::retencaoValida($dias) ? (int) $dias : self::RETENCAO_PADRAO;
+    }
 
     public static function cronInfo($name)
     {
         if ($name === 'limpar') {
-            return ['description' => __('Apaga IP e navegador de acessos e dúvidas com mais de 180 dias (LGPD)', 'propostas')];
+            return ['description' => __('Apaga IP e navegador de acessos e dúvidas mais antigos que o prazo configurado (LGPD)', 'propostas')];
         }
 
         return [];
@@ -60,7 +79,8 @@ class Acesso extends CommonGLPI
     {
         global $DB;
 
-        $limite = date('Y-m-d H:i:s', time() - self::RETENCAO_DIAS * DAY_TIMESTAMP);
+        $dias = self::retencaoDias();
+        $limite = date('Y-m-d H:i:s', time() - $dias * DAY_TIMESTAMP);
         $total = 0;
         foreach ([
             self::TABELA     => [],
@@ -73,7 +93,7 @@ class Acesso extends CommonGLPI
             $total += $DB->affectedRows();
         }
         $task->addVolume($total);
-        $task->log(sprintf('IP e navegador apagados em %d registro(s) com mais de %d dias', $total, self::RETENCAO_DIAS));
+        $task->log(sprintf('IP e navegador apagados em %d registro(s) com mais de %d dias', $total, $dias));
 
         return $total > 0 ? 1 : 0;
     }

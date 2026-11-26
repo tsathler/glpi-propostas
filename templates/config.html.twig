@@ -94,7 +94,15 @@
          <textarea class="form-control" id="aviso_privacidade" name="aviso_privacidade" rows="3" maxlength="{{ privacidade_maximo }}"
                    placeholder="{{ privacidade_padrao }}">{{ aviso_privacidade }}</textarea>
          <div class="form-hint mt-1">
-            {{ __('Texto puro, no formulário de aceite, logo acima do botão. Diga quais dados ficam guardados e para quê (LGPD). Em branco, aparece o texto de exemplo acima. IP e navegador de acessos e dúvidas são apagados depois de 180 dias.', 'propostas') }}
+            {{ __('Texto puro, no formulário de aceite, logo acima do botão. Diga quais dados ficam guardados e para quê (LGPD). Em branco, aparece o texto de exemplo acima.', 'propostas') }}
+         </div>
+      </div>
+      <div class="mb-3">
+         <label class="form-label" for="retencao_dias">{{ __('Prazo de guarda de IP e navegador (dias)', 'propostas') }}</label>
+         <input type="number" class="form-control" id="retencao_dias" name="retencao_dias" required
+                min="{{ retencao_minima }}" max="{{ retencao_maxima }}" step="1" value="{{ retencao_dias }}" style="max-width: 10rem">
+         <div class="form-hint mt-1">
+            {{ __('A ação automática diária "limpar" apaga o IP e o navegador de quem abriu o link ou mandou dúvida depois desse prazo; fica só a data. O aceite guarda os dele, que são a prova do contrato. Combine o prazo com o encarregado de dados (DPO).', 'propostas') }}
          </div>
       </div>
 
