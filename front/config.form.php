@@ -7,6 +7,7 @@
  */
 
 use Glpi\Application\View\TemplateRenderer;
+use GlpiPlugin\Propostas\Acesso;
 use GlpiPlugin\Propostas\Equipe;
 use GlpiPlugin\Propostas\Marca;
 use GlpiPlugin\Propostas\Proposta;
@@ -33,7 +34,15 @@ if (isset($_POST['update'])) {
     $cores_ok = ($cor_principal === '' || Marca::corValida($cor_principal) !== null)
         && ($cor_destaque === '' || Marca::corValida($cor_destaque) !== null);
 
-    if (!$cores_ok) {
+    $retencao = trim((string) ($_POST['retencao_dias'] ?? ''));
+
+    if (!Acesso::retencaoValida($retencao)) {
+        Session::addMessageAfterRedirect(htmlescape(sprintf(
+            __('Informe o prazo de guarda de IP e navegador em dias, de %d a %d.', 'propostas'),
+            Acesso::RETENCAO_MINIMA,
+            Acesso::RETENCAO_MAXIMA
+        )), false, ERROR);
+    } elseif (!$cores_ok) {
         Session::addMessageAfterRedirect(htmlescape(__('Informe as cores no formato #rrggbb (ex.: #1e3a8a) ou deixe em branco.', 'propostas')), false, ERROR);
     } elseif (!$url_ok) {
         Session::addMessageAfterRedirect(htmlescape(__('Informe um endereço completo, como https://propostas.exemplo.com.br', 'propostas')), false, ERROR);
@@ -54,6 +63,7 @@ if (isset($_POST['update'])) {
             'marca_cor_destaque'        => (string) Marca::corValida($cor_destaque),
             'marca_rodape'              => Marca::textoRodape($_POST['marca_rodape'] ?? ''),
             'aviso_privacidade'         => Marca::textoRodape($_POST['aviso_privacidade'] ?? '', Marca::PRIVACIDADE_MAXIMO),
+            'retencao_dias'             => (string) (int) $retencao,
             'campo_nome_ativo'          => !empty($_POST['campo_nome_ativo']) ? '1' : '0',
             'campo_condicoes_ativo'     => !empty($_POST['campo_condicoes_ativo']) ? '1' : '0',
         ]);
@@ -119,6 +129,9 @@ TemplateRenderer::getInstance()->display('@propostas/config.html.twig', [
     'aviso_privacidade'         => (string) ($config['aviso_privacidade'] ?? ''),
     'privacidade_padrao'        => Marca::privacidadePadrao(),
     'privacidade_maximo'        => Marca::PRIVACIDADE_MAXIMO,
+    'retencao_dias'             => Acesso::retencaoDias(),
+    'retencao_minima'           => Acesso::RETENCAO_MINIMA,
+    'retencao_maxima'           => Acesso::RETENCAO_MAXIMA,
     'campo_nome_ativo'          => (string) ($config['campo_nome_ativo'] ?? '1') !== '0',
     'campo_condicoes_ativo'     => (string) ($config['campo_condicoes_ativo'] ?? '1') !== '0',
 ]);
