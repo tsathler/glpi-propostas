@@ -78,8 +78,9 @@ class ModeloItem extends CommonDBChild
         }
 
         $linhas = [];
-        $totais = Calculo::totais(self::getItensDoModelo($item->getID()));
-        foreach (self::getItensDoModelo($item->getID()) as $row) {
+        $itens = self::getItensDoModelo($item->getID());
+        $totais = Calculo::totais($itens);
+        foreach ($itens as $row) {
             $linhas[] = [
                 'id'             => $row['id'],
                 'tipo'           => self::getTipos()[$row['tipo']] ?? $row['tipo'],

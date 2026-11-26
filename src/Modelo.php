@@ -163,30 +163,12 @@ class Modelo extends CommonDBTM
      */
     public function copiarParaProposta(int $propostas_id, array $valores = [], array $descontos = []): void
     {
-        foreach (Calculo::itensDaCopia(ModeloItem::getItensDoModelo($this->getID()), $valores, $descontos) as $item) {
-            (new PropostaItem())->add([
-                PropostaItem::$items_id => $propostas_id,
-                'tipo'                  => $item['tipo'],
-                'name'                  => $item['name'],
-                'quantidade'            => $item['quantidade'],
-                'valor_unitario'        => $item['valor_unitario'],
-                'desconto_pct'          => $item['desconto_pct'],
-                'ordem'                 => $item['ordem'],
-            ]);
-        }
-        foreach (ModeloBloco::getBlocosDoModelo($this->getID()) as $bloco) {
+        Proposta::copiarLinhas(
+            $propostas_id,
+            Calculo::itensDaCopia(ModeloItem::getItensDoModelo($this->getID()), $valores, $descontos),
             // Bloco desativado na biblioteca não vai mais para propostas novas.
-            if (empty($bloco['is_active'])) {
-                continue;
-            }
-            (new PropostaBloco())->add([
-                PropostaBloco::$items_id => $propostas_id,
-                'name'                   => $bloco['name'],
-                'conteudo'               => $bloco['conteudo'],
-                'ordem'                  => $bloco['ordem'],
-                'depois_dos_valores'     => (int) ($bloco['depois_dos_valores'] ?? 0),
-            ]);
-        }
+            array_filter(ModeloBloco::getBlocosDoModelo($this->getID()), static fn (array $b): bool => !empty($b['is_active']))
+        );
     }
 
     public function rawSearchOptions(): array

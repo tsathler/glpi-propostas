@@ -5,6 +5,20 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-11-26
+
+### Fixed
+
+- **Botões "Gerar link", "Reabrir" e "Cancelar"** aparecem só para quem pode editar a proposta (antes, quem só lia via os botões e recebia "acesso negado").
+- **Pular a cópia do modelo** deixou de ser um campo da requisição: só a duplicação faz isso, e um envio direto não liga mais a proposta a um modelo inativo ou de outra entidade.
+- **Excluir uma proposta com chamado** tira do chamado os observadores que o plugin tinha posto por ela.
+- **Quantidade que arredonda para zero** (0,004) é recusada; antes virava 0 na gravação.
+- **Lista de modelos ao criar** usa a entidade em que a proposta será criada (com entidade padrão configurada, aparecia um modelo que depois era recusado).
+
+### Changed
+
+- Código: um só laço de cópia de itens e blocos (criação pelo modelo e duplicação); filtro da proposta travada numa função testada; remoção de código morto e de um repasse sem lógica.
+
 ## [1.9.1] - 2026-11-26
 
 ### Fixed
@@ -317,7 +331,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.9.1...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.9.2...HEAD
+[1.9.2]: https://github.com/tsathler/glpi-propostas/compare/v1.9.1...v1.9.2
 [1.9.1]: https://github.com/tsathler/glpi-propostas/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/tsathler/glpi-propostas/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/tsathler/glpi-propostas/compare/v1.7.5...v1.8.0
