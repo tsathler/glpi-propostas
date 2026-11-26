@@ -191,6 +191,7 @@ class Proposta extends CommonDBTM
         $this->fields['data_emissao']       = date('Y-m-d');
         $this->fields['users_id_consultor'] = Session::getLoginUserID();
         $this->fields['status']             = self::STATUS_RASCUNHO;
+        $this->fields['entities_id']        = self::entidadeDeCriacao();
     }
 
     /** Ligado só por atualizarInterno(): libera os campos internos e a proposta travada. */
@@ -285,7 +286,7 @@ class Proposta extends CommonDBTM
 
         // Com modelo: validade, aviso prévio e condições vêm dele (itens e blocos em post_addItem).
         $modelos_id = (int) ($input['plugin_propostas_modelos_id'] ?? 0);
-        if ($modelos_id > 0 && empty($input['_sem_copiar_modelo'])) {
+        if ($modelos_id > 0 && !$this->copia_de_proposta) {
             $modelo = new Modelo();
             $entidade = (int) ($input['entities_id'] ?? Session::getActiveEntity());
             if (
@@ -367,7 +368,7 @@ class Proposta extends CommonDBTM
     public function post_addItem(): void
     {
         $modelos_id = (int) ($this->fields['plugin_propostas_modelos_id'] ?? 0);
-        if ($modelos_id > 0 && empty($this->input['_sem_copiar_modelo'])) {
+        if ($modelos_id > 0 && !$this->copia_de_proposta) {
             $modelo = new Modelo();
             if ($modelo->getFromDB($modelos_id)) {
                 // Campos mostrados ao escolher o modelo: valor e desconto (%) de cada item.
@@ -379,9 +380,6 @@ class Proposta extends CommonDBTM
                     is_array($descontos) ? $descontos : []
                 );
             }
-        }
-        if ((int) ($this->fields['tickets_id'] ?? 0) > 0) {
-            Equipe::sincronizarChamados([(int) $this->fields['tickets_id']]);
         }
     }
 
@@ -442,16 +440,7 @@ class Proposta extends CommonDBTM
         }
 
         if (!$this->isEditavel()) {
-            $ignorados = [];
-            foreach ($input as $campo => $valor) {
-                if (str_starts_with($campo, '_') || in_array($campo, self::CAMPOS_LIVRES_TRAVADA, true)) {
-                    continue;
-                }
-                if (array_key_exists($campo, $this->fields) && (string) $this->fields[$campo] !== (string) $valor) {
-                    $ignorados[] = $campo;
-                }
-                unset($input[$campo]);
-            }
+            [$input, $ignorados] = Calculo::filtrarTravada($input, $this->fields, self::CAMPOS_LIVRES_TRAVADA);
             if ($ignorados !== []) {
                 Session::addMessageAfterRedirect(
                     htmlescape(__('A proposta já foi enviada: só os comentários podem mudar. Para alterar valores ou condições, use "Reabrir para edição".', 'propostas')),
@@ -590,9 +579,9 @@ class Proposta extends CommonDBTM
             'link_oculto'   => !$this->isNewItem() && !$pode_editar && !empty($this->fields['token_cifrado']),
             'link_expira'   => $this->fields['token_expira'] ?? null,
             'link_expirado' => $this->isLinkExpirado(),
-            'pode_gerar'    => $this->podeGerarLink(),
-            'pode_reabrir'  => $this->podeReabrir(),
-            'pode_cancelar' => $this->podeCancelar(),
+            'pode_gerar'    => $pode_editar && $this->podeGerarLink(),
+            'pode_reabrir'  => $pode_editar && $this->podeReabrir(),
+            'pode_cancelar' => $pode_editar && $this->podeCancelar(),
             'pode_duplicar' => !$this->isNewItem() && Session::haveRight(self::$rightname, CREATE) && self::podeCriarAgora(),
             'modelo'        => $this->getModelo(),
             'cnpj_consulta' => (bool) (\Config::getConfigurationValue('plugin:propostas', 'cnpj_consulta_ativa') ?? false),
@@ -793,9 +782,7 @@ class Proposta extends CommonDBTM
             'empresa_nome_fantasia'       => $this->fields['empresa_nome_fantasia'],
             'empresa_cnpj'                => $this->fields['empresa_cnpj'],
             'plugin_propostas_modelos_id' => $this->fields['plugin_propostas_modelos_id'],
-            '_sem_copiar_modelo'          => true,
             'users_id_consultor' => Session::getLoginUserID() ?: $this->fields['users_id_consultor'],
-            'tickets_id'         => 0,
             'data_emissao'       => date('Y-m-d'),
             'validade_dias'      => $this->fields['validade_dias'],
             'aviso_previo_dias'  => $this->fields['aviso_previo_dias'],
@@ -806,9 +793,27 @@ class Proposta extends CommonDBTM
             return false;
         }
 
-        foreach (PropostaItem::getItensDaProposta($this->getID()) as $item) {
+        self::copiarLinhas((int) $id, PropostaItem::getItensDaProposta($this->getID()), PropostaBloco::getBlocosDaProposta($this->getID()));
+
+        Session::addMessageAfterRedirect(htmlescape(sprintf(
+            __('Proposta duplicada a partir da nº %s. Confira os dados e os itens antes de gerar o link.', 'propostas'),
+            $this->getNumero()
+        )));
+
+        return (int) $id;
+    }
+
+    /**
+     * Copia itens e blocos para a proposta $destino (criação pelo modelo e duplicação).
+     *
+     * @param iterable<array<string, mixed>> $itens
+     * @param iterable<array<string, mixed>> $blocos
+     */
+    public static function copiarLinhas(int $destino, iterable $itens, iterable $blocos): void
+    {
+        foreach ($itens as $item) {
             (new PropostaItem())->add([
-                PropostaItem::$items_id => $id,
+                PropostaItem::$items_id => $destino,
                 'tipo'                  => $item['tipo'],
                 'name'                  => $item['name'],
                 'quantidade'            => $item['quantidade'],
@@ -817,22 +822,15 @@ class Proposta extends CommonDBTM
                 'ordem'                 => $item['ordem'],
             ]);
         }
-        foreach (PropostaBloco::getBlocosDaProposta($this->getID()) as $bloco) {
+        foreach ($blocos as $bloco) {
             (new PropostaBloco())->add([
-                PropostaBloco::$items_id => $id,
+                PropostaBloco::$items_id => $destino,
                 'name'                   => $bloco['name'],
                 'conteudo'               => $bloco['conteudo'],
                 'ordem'                  => $bloco['ordem'],
                 'depois_dos_valores'     => (int) ($bloco['depois_dos_valores'] ?? 0),
             ]);
         }
-
-        Session::addMessageAfterRedirect(htmlescape(sprintf(
-            __('Proposta duplicada a partir da nº %s. Confira os dados e os itens antes de gerar o link.', 'propostas'),
-            $this->getNumero()
-        )));
-
-        return (int) $id;
     }
 
     /**
@@ -1455,7 +1453,7 @@ class Proposta extends CommonDBTM
         $totais = $this->getTotais();
         $grupos = [PropostaItem::TIPO_RECORRENTE => [], PropostaItem::TIPO_PONTUAL => []];
         foreach (PropostaItem::getItensDaProposta($this->getID()) as $i => $item) {
-            $subtotal = PropostaItem::calcularSubtotal($item);
+            $subtotal = Calculo::subtotal($item['quantidade'], $item['valor_unitario'], $item['desconto_pct']);
             $total_tipo = $totais[$item['tipo']] ?? 0.0;
             $grupos[$item['tipo']][] = [
                 'nome'        => (string) $item['name'],
@@ -1589,6 +1587,11 @@ class Proposta extends CommonDBTM
         $entidade = (int) $this->fields['entities_id'];
 
         return Session::haveAccessToEntity($entidade) ? $entidade : (int) Session::getActiveEntity();
+    }
+
+    public function post_purgeItem(): void
+    {
+        Equipe::sincronizarChamados([(int) ($this->fields['tickets_id'] ?? 0)]);
     }
 
     public function cleanDBonPurge(): void

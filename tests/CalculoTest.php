@@ -206,4 +206,20 @@ final class CalculoTest extends TestCase
         self::assertSame('', Calculo::codigo(null));
         self::assertSame('', Calculo::codigo(''));
     }
+
+    public function testPropostaTravadaSoDeixaPassarComentarioEInternos(): void
+    {
+        $gravado = ['id' => 7, 'name' => 'Proposta', 'empresa_cnpj' => '11222333000181', 'comment' => ''];
+        [$input, $ignorados] = Calculo::filtrarTravada([
+            'id'           => 7,
+            'name'         => 'Outro nome',
+            'empresa_cnpj' => '11222333000181',
+            'comment'      => 'nota interna',
+            '_glpi_csrf_token' => 'x',
+            'campo_novo'   => 'y',
+        ], $gravado, ['id', 'comment']);
+
+        self::assertSame(['id' => 7, 'comment' => 'nota interna', '_glpi_csrf_token' => 'x'], $input);
+        self::assertSame(['name'], $ignorados, 'só avisa do que mudaria; o CNPJ igual e o campo desconhecido não contam');
+    }
 }

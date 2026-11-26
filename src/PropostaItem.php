@@ -37,16 +37,6 @@ class PropostaItem extends CommonDBChild
     }
 
     /**
-     * Quantidade x valor unitário, menos o desconto.
-     *
-     * @param array<string, mixed> $item
-     */
-    public static function calcularSubtotal(array $item): float
-    {
-        return Calculo::subtotal($item['quantidade'], $item['valor_unitario'], $item['desconto_pct']);
-    }
-
-    /**
      * @return list<array<string, mixed>>
      */
     public static function getItensDaProposta(int $propostas_id): array
@@ -114,7 +104,7 @@ class PropostaItem extends CommonDBChild
                 'quantidade'     => Html::formatNumber($row['quantidade']),
                 'valor_unitario' => Html::formatNumber($row['valor_unitario']),
                 'desconto_pct'   => Html::formatNumber($row['desconto_pct']),
-                'subtotal'       => Html::formatNumber(self::calcularSubtotal($row)),
+                'subtotal'       => Html::formatNumber(Calculo::subtotal($row['quantidade'], $row['valor_unitario'], $row['desconto_pct'])),
             ];
         }
 

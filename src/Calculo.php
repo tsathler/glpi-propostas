@@ -41,6 +41,31 @@ final class Calculo
         return array_map(static fn (float $v): float => round($v, 2), $totais);
     }
 
+    /**
+     * Proposta enviada ou aceita: só os campos livres (e os internos, com "_") passam. É o que mantém a
+     * proposta igual ao que o código de verificação do aceite confere.
+     *
+     * @param array<string, mixed> $input
+     * @param array<string, mixed> $fields valores gravados
+     * @param list<string> $livres
+     * @return array{array<string, mixed>, list<string>} [input filtrado, campos que mudariam e foram ignorados]
+     */
+    public static function filtrarTravada(array $input, array $fields, array $livres): array
+    {
+        $ignorados = [];
+        foreach ($input as $campo => $valor) {
+            if (str_starts_with((string) $campo, '_') || in_array($campo, $livres, true)) {
+                continue;
+            }
+            if (array_key_exists($campo, $fields) && (string) $fields[$campo] !== (string) $valor) {
+                $ignorados[] = (string) $campo;
+            }
+            unset($input[$campo]);
+        }
+
+        return [$input, $ignorados];
+    }
+
     /** Validade da proposta em dias: mínimo e máximo aceitos. */
     public const VALIDADE_MINIMA = 1;
     public const VALIDADE_MAXIMA = 365;

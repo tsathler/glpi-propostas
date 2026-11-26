@@ -45,7 +45,7 @@ trait ValidaItem
         if (isset($input['tipo']) && !array_key_exists($input['tipo'], self::getTipos())) {
             $erros[] = __('Tipo de item inválido.', 'propostas');
         }
-        if (isset($input['quantidade']) && (!is_numeric($input['quantidade']) || $input['quantidade'] <= 0)) {
+        if (isset($input['quantidade']) && (!is_numeric($input['quantidade']) || round((float) $input['quantidade'], 2) <= 0)) {
             $erros[] = __('A quantidade deve ser maior que zero.', 'propostas');
         }
         if (isset($input['valor_unitario']) && (!is_numeric($input['valor_unitario']) || $input['valor_unitario'] < 0)) {
