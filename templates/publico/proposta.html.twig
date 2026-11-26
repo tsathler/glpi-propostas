@@ -278,21 +278,25 @@
       </script>
       <script>
          /* Antes de enviar, troca o token anti-falsificação por um novo: o da página expira com a sessão
-            (24 min parada). Se a busca falhar, envia assim mesmo com o da página. */
+            (24 min parada). Se a busca falhar ou passar de 5 s, envia assim mesmo com o da página.
+            Um só envio por formulário: o clique duplo durante a busca não manda duas vezes. */
          (function () {
             document.querySelectorAll('form.formulario').forEach(function (form) {
                form.addEventListener('submit', function (evento) {
-                  if (form.dataset.renovado) { return; }
                   evento.preventDefault();
-                  fetch({{ acao_csrf|json_encode|raw }}, {credentials: 'same-origin', cache: 'no-store'})
+                  if (form.dataset.enviando) { return; }
+                  form.dataset.enviando = '1';
+                  const limite = window.AbortSignal && AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined;
+                  fetch({{ acao_csrf|json_encode|raw }}, {credentials: 'same-origin', cache: 'no-store', signal: limite})
                      .then(function (r) { return r.ok ? r.json() : null; })
                      .catch(function () { return null; })
                      .then(function (dados) {
                         if (dados && dados.token) { form.elements._glpi_csrf_token.value = dados.token; }
-                        form.dataset.renovado = '1';
                         form.submit();
                      });
                });
+               // Voltar para a página pelo histórico (cache do navegador) libera o formulário de novo.
+               window.addEventListener('pageshow', function (e) { if (e.persisted) { delete form.dataset.enviando; } });
             });
          })();
       </script>
