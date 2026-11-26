@@ -5,6 +5,12 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.9.3] - 2026-11-26
+
+### Fixed
+
+- **Envio da página do cliente:** clique duplo em "Enviar dúvida" ou "Confirmar aceite" manda uma vez só; a busca do token novo desiste em 5 segundos e envia com o da página, em vez de travar o envio com a internet ruim.
+
 ## [1.9.2] - 2026-11-26
 
 ### Fixed
@@ -331,7 +337,8 @@ Primeira versão publicada. Reúne o que foi desenvolvido nas versões 0.x (abai
 - Depois de criar uma proposta, o GLPI volta para ela, independentemente da preferência "voltar ao item criado".
 - Reinstalar (`plugin:install --force`) falhava com "Duplicate entry" em `glpi_profilerights`. Agora o direito só é criado na primeira instalação e os ajustes feitos nos perfis são mantidos.
 
-[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.9.2...HEAD
+[Unreleased]: https://github.com/tsathler/glpi-propostas/compare/v1.9.3...HEAD
+[1.9.3]: https://github.com/tsathler/glpi-propostas/compare/v1.9.2...v1.9.3
 [1.9.2]: https://github.com/tsathler/glpi-propostas/compare/v1.9.1...v1.9.2
 [1.9.1]: https://github.com/tsathler/glpi-propostas/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/tsathler/glpi-propostas/compare/v1.8.0...v1.9.0
