@@ -246,6 +246,7 @@ class Proposta extends CommonDBTM
     private const CAMPOS_INTERNOS = [
         'status', 'versao', 'token_hash', 'token_cifrado', 'token_expira',
         'link_gerado_em', 'lembrete_nao_vista', 'lembrete_vencendo',
+        'data_emissao', // data do envio: posta ao gerar o link
     ];
 
     /** Com a proposta travada (já enviada), o formulário só pode mudar estes campos. */
@@ -287,9 +288,14 @@ class Proposta extends CommonDBTM
             $input['is_recursive'] = 0;
         }
 
-        // Com modelo: validade, aviso prévio e condições vêm dele (itens e blocos em post_addItem).
+        // Toda proposta nasce de um modelo (a duplicação herda o da original).
+        // Validade, aviso prévio e condições vêm dele (itens e blocos em post_addItem).
         $modelos_id = (int) ($input['plugin_propostas_modelos_id'] ?? 0);
-        if ($modelos_id > 0 && !$this->copia_de_proposta) {
+        if (!$this->copia_de_proposta) {
+            if ($modelos_id <= 0) {
+                Session::addMessageAfterRedirect(htmlescape(__('Escolha o modelo de proposta.', 'propostas')), false, ERROR);
+                return false;
+            }
             $modelo = new Modelo();
             $entidade = (int) ($input['entities_id'] ?? Session::getActiveEntity());
             if (
@@ -398,14 +404,29 @@ class Proposta extends CommonDBTM
     }
 
     /**
-     * CNPJ opcional no rascunho, mas, se informado, precisa ter dígitos válidos. Gravado formatado.
+     * CNPJ e razão social obrigatórios na criação e não podem ser apagados depois; o CNPJ precisa ter
+     * dígitos válidos e é gravado formatado. A duplicação copia os da original como estão (propostas antigas podem não ter).
      *
      * @param array<string, mixed> $input
      * @return array<string, mixed>|false
      */
     private function validarEmpresa(array $input): array|false
     {
-        if (array_key_exists('empresa_cnpj', $input) && trim((string) $input['empresa_cnpj']) !== '') {
+        $obrigatorios = [
+            'empresa_cnpj'         => __('Informe o CNPJ da empresa.', 'propostas'),
+            'empresa_razao_social' => __('Informe a razão social da empresa.', 'propostas'),
+        ];
+        foreach ($obrigatorios as $campo => $erro) {
+            if (
+                trim((string) ($input[$campo] ?? '')) === '' && !$this->copia_de_proposta
+                && ($this->isNewItem() || array_key_exists($campo, $input))
+            ) {
+                Session::addMessageAfterRedirect(htmlescape($erro), false, ERROR);
+                return false;
+            }
+        }
+        $cnpj = trim((string) ($input['empresa_cnpj'] ?? ''));
+        if ($cnpj !== '') {
             if (!Cnpj::validar((string) $input['empresa_cnpj'])) {
                 Session::addMessageAfterRedirect(htmlescape(__('CNPJ inválido: confira os dígitos.', 'propostas')), false, ERROR);
                 return false;
@@ -914,17 +935,16 @@ class Proposta extends CommonDBTM
             return false;
         }
 
+        // A emissão é a data do envio; a validade conta a partir dela.
+        $this->fields['data_emissao'] = date('Y-m-d');
         $expira = $this->calcularExpiracao();
-        if ($expira <= new \DateTimeImmutable()) {
-            Session::addMessageAfterRedirect(htmlescape(__('A validade já terminou: ajuste a emissão ou a validade antes de gerar o link.', 'propostas')), false, ERROR);
-            return false;
-        }
 
         $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
 
         $ok = $this->atualizarInterno([
             'id'             => $this->getID(),
             'status'         => self::STATUS_ENVIADA,
+            'data_emissao'   => $this->fields['data_emissao'],
             'token_hash'     => hash('sha256', $token),
             'token_cifrado'  => (new \GLPIKey())->encrypt($token),
             'token_expira'   => $expira->format('Y-m-d H:i:s'),

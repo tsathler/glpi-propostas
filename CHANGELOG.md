@@ -5,6 +5,13 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-11-27
+
+### Changed
+
+- **Modelo, CNPJ e razão social obrigatórios:** não dá mais para adicionar uma proposta sem escolher o modelo e informar o CNPJ e a razão social da empresa, nem apagar esses dados depois. A duplicação continua herdando o modelo e a empresa da original.
+- **Emissão automática:** a data de emissão deixou de ser editável. Ela passa a ser a data em que o link é gerado (também no link de cada nova versão), e a validade conta a partir dela.
+
 ## [1.10.0] - 2026-11-27
 
 ### Changed
