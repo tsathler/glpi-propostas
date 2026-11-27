@@ -5,6 +5,10 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+### Added
+
+- **Relatório de propostas:** novo menu **Ferramentas > Relatório de propostas**, com conversão (pela data de envio) e fechamento com valor mensal e pontual (pela data do aceite), por consultor e por equipe, filtro de período e equipe e exportação em CSV. Segue a mesma visibilidade da lista de propostas.
+
 ## [1.10.1] - 2026-11-27
 
 ### Changed

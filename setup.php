@@ -17,6 +17,7 @@ use GlpiPlugin\Propostas\Profile;
 use GlpiPlugin\Propostas\Proposta;
 use GlpiPlugin\Propostas\PropostaBloco;
 use GlpiPlugin\Propostas\PropostaItem;
+use GlpiPlugin\Propostas\Relatorio;
 use GlpiPlugin\Propostas\Resposta;
 
 define('PLUGIN_PROPOSTAS_VERSION', '1.10.1');
@@ -71,7 +72,7 @@ function plugin_init_propostas(): void
 
     // Ferramentas > Propostas, Modelos de proposta e Blocos de texto.
     // O GLPI só mostra cada entrada para quem tem o direito de leitura dela.
-    $PLUGIN_HOOKS[Hooks::MENU_TOADD]['propostas'] = ['tools' => [Proposta::class, Modelo::class, Bloco::class]];
+    $PLUGIN_HOOKS[Hooks::MENU_TOADD]['propostas'] = ['tools' => [Proposta::class, Relatorio::class, Modelo::class, Bloco::class]];
 
     // Equipes: entrada/saída de membro, troca de Responsável ou de grupo pai acertam o
     // gestor observador nos chamados abertos das propostas.
