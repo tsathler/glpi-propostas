@@ -5,6 +5,16 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.9.4] - 2026-11-27
+
+### Changed
+
+- **Campo Consultor** monta a lista com uma consulta só ao banco, em vez de duas por usuário.
+
+### Documentation
+
+- **README:** como manter o IP real do cliente quando um proxy em outra máquina repassa o link público (sem isso, o limite de envios vale para todos os clientes juntos e o aceite grava o IP do proxy).
+
 ## [1.9.3] - 2026-11-26
 
 ### Fixed
