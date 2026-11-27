@@ -77,6 +77,8 @@ server {
 }
 ```
 
+**IP real do cliente:** o exemplo acima entrega a requisição direto ao PHP, então o GLPI vê o IP de quem acessou. Se um proxy em outra máquina repassar as requisições (`proxy_pass`), todo cliente chega com o IP do proxy: o limite de 20 envios por hora passa a valer para todos os clientes juntos, e o aceite grava o IP do proxy. Nesse caso, configure o servidor do GLPI para confiar **só** no proxy e ler o IP do cabeçalho que ele envia. No Nginx do GLPI: `set_real_ip_from <IP do proxy>;` e `real_ip_header X-Forwarded-For;` (e no proxy: `proxy_set_header X-Forwarded-For $remote_addr;`). No Apache: `mod_remoteip` com `RemoteIPHeader X-Forwarded-For` e `RemoteIPInternalProxy <IP do proxy>`. Nunca confie nesse cabeçalho vindo de qualquer origem: o cliente poderia escolher o próprio IP.
+
 Se o endereço externo ficar em branco, os links usam o "URL da aplicação" do GLPI. Em ambientes clonados, confira se esse endereço aponta para o servidor certo.
 
 ## Notas para quem mantém o plugin

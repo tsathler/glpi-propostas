@@ -636,17 +636,23 @@ class Proposta extends CommonDBTM
         // Proposta nova: a entidade em que ela vai ser criada.
         $entidade = $this->isNewItem() ? self::entidadeDeCriacao() : (int) $this->fields['entities_id'];
 
+        // Uma consulta só: ativos, não excluídos e com perfil na entidade (ou recursivo numa acima).
+        global $DB;
         $opcoes = [];
-        $user = new \User();
-        foreach ($ids as $id) {
-            if (
-                $user->getFromDB($id)
-                && $user->fields['is_active']
-                && !$user->fields['is_deleted']
-                && in_array($entidade, \Profile_User::getUserEntities($id, true), false)
-            ) {
-                $opcoes[$id] = getUserName($id);
-            }
+        $acima = getAncestorsOf('glpi_entities', $entidade);
+        $na_entidade = [['pu.entities_id' => $entidade]];
+        if ($acima !== []) {
+            $na_entidade[] = ['pu.entities_id' => array_values($acima), 'pu.is_recursive' => 1];
+        }
+        $linhas = $ids === [] ? [] : $DB->request([
+            'SELECT'     => ['u.id', 'u.name', 'u.realname', 'u.firstname'],
+            'DISTINCT'   => true,
+            'FROM'       => \User::getTable() . ' AS u',
+            'INNER JOIN' => [\Profile_User::getTable() . ' AS pu' => ['ON' => ['pu' => 'users_id', 'u' => 'id']]],
+            'WHERE'      => ['u.id' => $ids, 'u.is_active' => 1, 'u.is_deleted' => 0, 'OR' => $na_entidade],
+        ]);
+        foreach ($linhas as $u) {
+            $opcoes[(int) $u['id']] = formatUserName((int) $u['id'], $u['name'], $u['realname'], $u['firstname']);
         }
         $atual = (int) ($this->fields['users_id_consultor'] ?? 0);
         if ($atual > 0 && !isset($opcoes[$atual])) {
