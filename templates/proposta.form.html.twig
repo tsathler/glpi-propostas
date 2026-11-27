@@ -18,6 +18,7 @@
       {{ fields.dropdownField('GlpiPlugin\\Propostas\\Modelo', 'plugin_propostas_modelos_id', 0, __('Modelo de proposta', 'propostas'), {
          condition: {'is_active': 1},
          entity: item.fields['entities_id'],
+         required: true,
          helper: __('Validade, condições, itens e blocos de texto do modelo são copiados para a proposta. O modelo não pode ser trocado depois.', 'propostas')
       }) }}
 
@@ -254,13 +255,13 @@
       {{ fields.htmlField('', '<a href="' ~ modelo.getLinkURL() ~ '">' ~ modelo.fields['name']|e ~ '</a>', __('Modelo de origem', 'propostas')) }}
    {% endif %}
 
-   {# Empresa cliente: obrigatória (razão social e CNPJ) só para gerar o link. #}
+   {# Empresa cliente: CNPJ e razão social obrigatórios. #}
    <div class="col-12 mt-2"><h4 class="mb-0"><i class="ti ti-building"></i> {{ __('Empresa cliente', 'propostas') }}</h4></div>
 
    {% set campo_cnpj %}
       <div class="input-group">
          <input type="text" class="form-control" name="empresa_cnpj" id="propostas-cnpj" maxlength="18"
-                value="{{ item.fields['empresa_cnpj'] }}" placeholder="00.000.000/0000-00" {{ editavel ? '' : 'disabled' }}>
+                value="{{ item.fields['empresa_cnpj'] }}" placeholder="00.000.000/0000-00" {{ editavel ? 'required' : 'disabled' }}>
          {% if cnpj_consulta and editavel %}
             <button type="button" class="btn btn-outline-secondary" id="propostas-buscar-cnpj">
                <i class="ti ti-search"></i> {{ __('Buscar CNPJ', 'propostas') }}
@@ -269,9 +270,9 @@
       </div>
       <div class="form-text" id="propostas-cnpj-msg"></div>
    {% endset %}
-   {{ fields.htmlField('', campo_cnpj, __('CNPJ', 'propostas')) }}
+   {{ fields.htmlField('', campo_cnpj, __('CNPJ', 'propostas'), {required: editavel}) }}
 
-   {{ fields.textField('empresa_razao_social', item.fields['empresa_razao_social'], __('Razão social', 'propostas'), travado|merge({id: 'propostas-razao'})) }}
+   {{ fields.textField('empresa_razao_social', item.fields['empresa_razao_social'], __('Razão social', 'propostas'), travado|merge({id: 'propostas-razao', required: editavel})) }}
    {{ fields.textField('empresa_nome_fantasia', item.fields['empresa_nome_fantasia'], __('Nome fantasia', 'propostas'), travado|merge({id: 'propostas-fantasia'})) }}
    {{ fields.textField('solicitante', item.fields['solicitante'], __('Contato na empresa', 'propostas'), travado) }}
 
@@ -345,7 +346,9 @@
       })) }}
    {% endif %}
 
-   {{ fields.dateField('data_emissao', item.fields['data_emissao'], __('Emissão', 'propostas'), travado) }}
+   {{ fields.htmlField('', item.fields['data_emissao']|formatted_date, __('Emissão', 'propostas'), {
+      helper: __('Preenchida com a data do envio ao gerar o link; a validade conta a partir dela.', 'propostas')
+   }) }}
 
    {{ fields.numberField('validade_dias', item.fields['validade_dias'], __('Validade (dias)', 'propostas'), travado|merge({min: 1})) }}
 
