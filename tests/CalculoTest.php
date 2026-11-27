@@ -222,4 +222,29 @@ final class CalculoTest extends TestCase
         self::assertSame(['id' => 7, 'comment' => 'nota interna', '_glpi_csrf_token' => 'x'], $input);
         self::assertSame(['name'], $ignorados, 'só avisa do que mudaria; o CNPJ igual e o campo desconhecido não contam');
     }
+
+    public function testLembretes(): void
+    {
+        $agora = new \DateTimeImmutable('2026-11-20 09:00:00');
+        $lembretes = static fn (bool $aguardando, bool $aberto, ?string $gerado, ?string $expira, bool $nv = false, bool $vc = false): array
+            => Calculo::lembretesDevidos($aguardando, $aberto, $gerado, $expira, $nv, $vc, $agora);
+
+        // Enviada há 3 dias, sem visualização, vence em 10: só "não vista".
+        self::assertSame(['nao_vista'], $lembretes(true, true, '2026-11-17 08:00:00', '2026-11-30 23:59:59'));
+        // Enviada há 1 dia: ainda cedo.
+        self::assertSame([], $lembretes(true, true, '2026-11-19 10:00:00', '2026-11-30 23:59:59'));
+        // Já avisou: não repete.
+        self::assertSame([], $lembretes(true, true, '2026-11-17 08:00:00', '2026-11-30 23:59:59', true));
+        // Vista (Visualizada/Com dúvida) e vence em menos de 2 dias: só "vencendo".
+        self::assertSame(['vencendo'], $lembretes(false, true, '2026-11-10 08:00:00', '2026-11-21 23:59:59'));
+        // Não vista e perto de vencer: os dois.
+        self::assertSame(['nao_vista', 'vencendo'], $lembretes(true, true, '2026-11-10 08:00:00', '2026-11-21 23:59:59'));
+        // Link gerado já dentro dos 2 dias finais: o consultor já sabia do prazo curto.
+        self::assertSame([], $lembretes(false, true, '2026-11-20 08:00:00', '2026-11-21 23:59:59'));
+        // Vencido, ou fora de "em aberto" (aceita, cancelada): nada.
+        self::assertSame([], $lembretes(true, true, '2026-11-01 08:00:00', '2026-11-19 23:59:59'));
+        self::assertSame([], $lembretes(false, false, '2026-11-10 08:00:00', '2026-11-21 23:59:59'));
+        // Link de antes da 1.10 (sem data de geração): só o "vencendo".
+        self::assertSame(['vencendo'], $lembretes(true, true, null, '2026-11-21 23:59:59'));
+    }
 }

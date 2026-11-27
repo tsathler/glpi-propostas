@@ -350,6 +350,37 @@
          })();
       </script>
    {% endif %}
+
+   {% if acao_visto %}
+      <script>
+         /* Confirma que o cliente viu: a página ficou visível na tela por 3 segundos seguidos, ou foi
+            rolada. Filtro de links do e-mail e prévias de mensageiro pedem o endereço, mas não rodam isto.
+            shortcut: um navegador de verdade numa caixa de areia (como a análise de links do Defender)
+            pode rodar o script; se aparecer "Visualizada" falsa, exigir rolagem ou toque. */
+         (function () {
+            let enviado = false;
+            let espera = null;
+            function confirmar() {
+               if (enviado) { return; }
+               enviado = true;
+               clearTimeout(espera);
+               fetch({{ acao_visto|json_encode|raw }}, {
+                  method: 'POST',
+                  credentials: 'same-origin',
+                  keepalive: true,
+                  headers: {'X-Requested-With': 'XMLHttpRequest', 'X-Glpi-Csrf-Token': {{ visto_csrf|json_encode|raw }}}
+               }).catch(function () {});
+            }
+            function contar() {
+               clearTimeout(espera);
+               if (document.visibilityState === 'visible') { espera = setTimeout(confirmar, 3000); }
+            }
+            document.addEventListener('visibilitychange', contar);
+            window.addEventListener('scroll', confirmar, {once: true, passive: true});
+            contar();
+         })();
+      </script>
+   {% endif %}
 </main>
 
 {# Número e versão já estão no topo; o rodapé fica com o aviso de contato (quando não dá mais para

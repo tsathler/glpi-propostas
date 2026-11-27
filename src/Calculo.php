@@ -66,6 +66,48 @@ final class Calculo
         return [$input, $ignorados];
     }
 
+    /** Dias depois do envio sem o cliente ver a proposta até o lembrete "não vista". */
+    public const LEMBRETE_SEM_VISTA_DIAS = 2;
+
+    /** Dias antes do vencimento para o lembrete "vencendo". */
+    public const LEMBRETE_VENCENDO_DIAS = 2;
+
+    /**
+     * Lembretes ao consultor que já cabem para uma proposta (ação automática diária "lembrar").
+     * - nao_vista: enviada há 2 dias ou mais e o cliente ainda não viu.
+     * - vencendo: ainda em aberto, faltam 2 dias ou menos, e o link foi gerado antes dessa janela.
+     *
+     * @param bool $aguardando_visto status Enviada (o cliente ainda não viu)
+     * @param bool $em_aberto status Enviada, Visualizada ou Com dúvida
+     * @return list<string>
+     */
+    public static function lembretesDevidos(
+        bool $aguardando_visto,
+        bool $em_aberto,
+        ?string $gerado_em,
+        ?string $expira,
+        bool $avisou_nao_vista,
+        bool $avisou_vencendo,
+        \DateTimeImmutable $agora
+    ): array {
+        if (!$em_aberto || $expira === null || new \DateTimeImmutable($expira) <= $agora) {
+            return [];
+        }
+        $janela = (new \DateTimeImmutable($expira))->modify(sprintf('-%d days', self::LEMBRETE_VENCENDO_DIAS));
+        $gerado = $gerado_em !== null ? new \DateTimeImmutable($gerado_em) : null;
+
+        $devidos = [];
+        if ($aguardando_visto && !$avisou_nao_vista && $gerado !== null
+            && $gerado->modify(sprintf('+%d days', self::LEMBRETE_SEM_VISTA_DIAS)) <= $agora) {
+            $devidos[] = 'nao_vista';
+        }
+        if (!$avisou_vencendo && $agora >= $janela && ($gerado === null || $gerado < $janela)) {
+            $devidos[] = 'vencendo';
+        }
+
+        return $devidos;
+    }
+
     /** Validade da proposta em dias: mínimo e máximo aceitos. */
     public const VALIDADE_MINIMA = 1;
     public const VALIDADE_MAXIMA = 365;

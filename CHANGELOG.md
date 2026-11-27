@@ -5,6 +5,17 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-11-27
+
+### Changed
+
+- **Visualização confirmada:** abrir o endereço só registra um acesso. A proposta passa a *Visualizada*, e o consultor é avisado, quando a página confirma que foi vista (visível na tela por 3 segundos ou rolada). O filtro de links do e-mail e as prévias de mensageiro deixam de marcar a proposta como vista. Rota nova `/p/{token}/visto`: **libere-a no Nginx externo** (exemplo atualizado no README).
+
+### Added
+
+- **Resumo ao lado do link:** quando o cliente viu pela primeira vez, o último acesso e quantos acessos houve; ou o aviso de que o link foi aberto sem visualização confirmada. A aba **Acessos** ganhou a coluna *Visto*.
+- **Lembretes ao consultor** (ação automática diária **lembrar** e duas notificações novas): proposta enviada há 2 dias e ainda não vista, e proposta a 2 dias de vencer sem aceite. Uma vez por link.
+
 ## [1.9.4] - 2026-11-27
 
 ### Changed

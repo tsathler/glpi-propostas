@@ -243,7 +243,10 @@ class Proposta extends CommonDBTM
     }
 
     /** Campos que só as ações do plugin alteram (nunca o formulário). */
-    private const CAMPOS_INTERNOS = ['status', 'versao', 'token_hash', 'token_cifrado', 'token_expira'];
+    private const CAMPOS_INTERNOS = [
+        'status', 'versao', 'token_hash', 'token_cifrado', 'token_expira',
+        'link_gerado_em', 'lembrete_nao_vista', 'lembrete_vencendo',
+    ];
 
     /** Com a proposta travada (já enviada), o formulário só pode mudar estes campos. */
     private const CAMPOS_LIVRES_TRAVADA = ['id', 'comment'];
@@ -579,6 +582,9 @@ class Proposta extends CommonDBTM
             'link_oculto'   => !$this->isNewItem() && !$pode_editar && !empty($this->fields['token_cifrado']),
             'link_expira'   => $this->fields['token_expira'] ?? null,
             'link_expirado' => $this->isLinkExpirado(),
+            // Aberturas do link e visualizações confirmadas da versão atual (a aba Acessos tem o detalhe).
+            'acessos'       => !$this->isNewItem() && !empty($this->fields['token_hash'])
+                ? Acesso::resumo($this->getID(), (int) $this->fields['versao']) : null,
             'pode_gerar'    => $pode_editar && $this->podeGerarLink(),
             'pode_reabrir'  => $pode_editar && $this->podeReabrir(),
             'pode_cancelar' => $pode_editar && $this->podeCancelar(),
@@ -711,6 +717,9 @@ class Proposta extends CommonDBTM
         if ($name === 'expirar') {
             return ['description' => __('Marca como expiradas as propostas enviadas que passaram da validade', 'propostas')];
         }
+        if ($name === 'lembrar') {
+            return ['description' => __('Avisa o consultor de proposta ainda não vista pelo cliente ou perto de vencer', 'propostas')];
+        }
 
         return [];
     }
@@ -762,6 +771,49 @@ class Proposta extends CommonDBTM
         $task->addVolume($expiradas);
 
         return $expiradas > 0 ? 1 : 0;
+    }
+
+    /**
+     * Lembretes ao consultor, uma vez por link: "não vista" (enviada há 2 dias sem o cliente ver) e
+     * "vencendo" (faltam 2 dias e ainda não foi aceita). Regras em Calculo::lembretesDevidos().
+     *
+     * @return int 1 se mandou algum lembrete, 0 se não havia nada a fazer
+     */
+    public static function cronLembrar(\CronTask $task): int
+    {
+        global $DB;
+
+        $agora = new \DateTimeImmutable();
+        $campos = ['nao_vista' => 'lembrete_nao_vista', 'vencendo' => 'lembrete_vencendo'];
+        $enviados = 0;
+        foreach ($DB->request([
+            'FROM'  => self::getTable(),
+            'WHERE' => ['status' => self::STATUS_EM_ABERTO, 'token_expira' => ['>', $agora->format('Y-m-d H:i:s')]],
+        ]) as $row) {
+            $devidos = Calculo::lembretesDevidos(
+                $row['status'] === self::STATUS_ENVIADA,
+                true,
+                $row['link_gerado_em'],
+                $row['token_expira'],
+                !empty($row['lembrete_nao_vista']),
+                !empty($row['lembrete_vencendo']),
+                $agora
+            );
+            $proposta = new self();
+            if ($devidos === [] || !$proposta->getFromDB((int) $row['id'])) {
+                continue;
+            }
+            foreach ($devidos as $evento) {
+                // Direto no banco: é só a marca de "já avisei", sem histórico nem ganchos.
+                $DB->update(self::getTable(), [$campos[$evento] => $agora->format('Y-m-d H:i:s')], ['id' => $proposta->getID()]);
+                $proposta->notificar($evento);
+                $task->log(sprintf('Proposta %s (versão %d): lembrete "%s"', $proposta->getNumero(), (int) $proposta->fields['versao'], $evento));
+                $enviados++;
+            }
+        }
+        $task->addVolume($enviados);
+
+        return $enviados > 0 ? 1 : 0;
     }
 
     /* ------------------------------------------------------------------
@@ -876,6 +928,10 @@ class Proposta extends CommonDBTM
             'token_hash'     => hash('sha256', $token),
             'token_cifrado'  => (new \GLPIKey())->encrypt($token),
             'token_expira'   => $expira->format('Y-m-d H:i:s'),
+            // Base dos lembretes ao consultor (ação automática "lembrar"); cada link novo avisa de novo.
+            'link_gerado_em'     => date('Y-m-d H:i:s'),
+            'lembrete_nao_vista' => 'NULL',
+            'lembrete_vencendo'  => 'NULL',
         ]);
         if ($ok) {
             Session::addMessageAfterRedirect(htmlescape(__('Link gerado. A proposta está travada para edição.', 'propostas')));
@@ -1084,16 +1140,27 @@ class Proposta extends CommonDBTM
     }
 
     /**
-     * Abertura do link. Quem está logado no GLPI (consultor conferindo o link) não conta.
-     * Registra o acesso e, na primeira abertura, muda Enviada -> Visualizada e avisa o consultor.
+     * Abertura do link (o endereço foi pedido): só fica na aba Acessos. Filtro de links do e-mail e
+     * prévias também pedem o endereço, então isso não muda o status. Quem está logado no GLPI não conta.
      */
-    public function registrarVisualizacao(string $ip, string $user_agent): void
+    public function registrarAbertura(string $ip, string $user_agent): void
+    {
+        if (Session::getLoginUserID() === false) {
+            Acesso::registrar($this->getID(), (int) $this->fields['versao'], $ip, $user_agent);
+        }
+    }
+
+    /**
+     * Visualização confirmada pela página (ficou visível na tela ou foi rolada). Marca o acesso como
+     * visto e, na primeira vez, muda Enviada -> Visualizada e avisa o consultor.
+     */
+    public function confirmarVisualizacao(string $ip, string $user_agent): void
     {
         if (Session::getLoginUserID() !== false) {
             return;
         }
 
-        Acesso::registrar($this->getID(), (int) $this->fields['versao'], $ip, $user_agent);
+        Acesso::registrar($this->getID(), (int) $this->fields['versao'], $ip, $user_agent, true);
 
         if ($this->fields['status'] !== self::STATUS_ENVIADA) {
             return;
