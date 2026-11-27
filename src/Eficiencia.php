@@ -141,6 +141,31 @@ final class Eficiencia
         return $valor !== '' && str_contains("=+-@\t\r", $valor[0]) ? "'" . $valor : $valor;
     }
 
+    /** Colunas de todos os formatos de exportação, na ordem de linhasExportacao(). */
+    public const CABECALHO_EXPORTACAO = [
+        'Nome', 'Enviadas', 'Aceitas (das enviadas)', 'Em aberto', 'Taxa',
+        'Aceitas no período', 'R$ mensal', 'R$ pontual', 'Por unidade',
+    ];
+
+    /** Índices (base 0) das colunas que cada formato precisa formatar. */
+    public const COLUNA_TAXA = 4;
+    public const COLUNAS_VALOR = [6, 7];
+
+    /**
+     * Linhas nomeadas (linha de resultado + 'nome') na ordem do cabeçalho, com valores crus:
+     * taxa em fração 0–1 ou null, valores em float. Cada formato de saída formata do seu jeito.
+     *
+     * @param list<array> $linhas
+     * @return list<list<mixed>>
+     */
+    public static function linhasExportacao(array $linhas): array
+    {
+        return array_map(static fn (array $l): array => [
+            $l['nome'], $l['enviadas'], $l['aceitas_envio'], $l['em_aberto'], $l['taxa'],
+            $l['aceitas'], $l['recorrente'], $l['pontual'], $l['por_unidade'],
+        ], $linhas);
+    }
+
     private static function dataValida(?string $data): bool
     {
         if ($data === null) {

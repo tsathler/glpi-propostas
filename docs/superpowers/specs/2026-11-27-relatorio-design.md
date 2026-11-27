@@ -61,3 +61,11 @@ Equipe Sul │    25       9        7      36%    │   11    12.300,00   5.100,
 - Taxa com zero enviadas: mostrar "—", não 0%.
 - Com equipes desligadas na configuração, a tabela por equipe não aparece.
 - Formato do CSV: uma linha por consultor e uma por equipe, com as mesmas colunas da tela.
+
+## Exportação em mais formatos (adendo)
+
+- O botão vira um menu **Exportar** com XLSX, ODS, PDF e CSV (`?formato=`).
+- Os quatro partem das mesmas linhas (`Eficiencia::linhasExportacao`), com valores crus; cada formato formata do seu jeito.
+- XLSX e ODS usam o PhpSpreadsheet e o PDF usa o `GLPIPDF`, ambos já embutidos no GLPI 11: nenhuma dependência nova.
+- Na planilha, uma aba por tabela, números de verdade e o nome sempre como texto (nunca fórmula).
+- Abordagens descartadas: gerar XLSX à mão (muito código) e a exportação da busca nativa (só exporta listas de itens).

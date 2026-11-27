@@ -72,9 +72,16 @@
          </label>
       {% endif %}
       <button type="submit" class="btn btn-primary">{{ __('Filtrar', 'propostas') }}</button>
-      <a class="btn btn-outline-secondary" href="{{ url }}?{{ {'inicio': inicio, 'fim': fim, 'equipe': equipe, 'csv': 1}|url_encode }}">
-         <i class="ti ti-download"></i> {{ __('Exportar CSV', 'propostas') }}
-      </a>
+      <div class="dropdown">
+         <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="ti ti-download"></i> {{ __('Exportar', 'propostas') }}
+         </button>
+         <div class="dropdown-menu">
+            {% for formato, rotulo in {'xlsx': __('Excel (XLSX)', 'propostas'), 'ods': __('LibreOffice (ODS)', 'propostas'), 'pdf': __('PDF', 'propostas'), 'csv': __('CSV', 'propostas')} %}
+               <a class="dropdown-item" href="{{ url }}?{{ {'inicio': inicio, 'fim': fim, 'equipe': equipe, 'formato': formato}|url_encode }}">{{ rotulo }}</a>
+            {% endfor %}
+         </div>
+      </div>
    </div>
 </form>
 

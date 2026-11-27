@@ -92,4 +92,18 @@ final class EficienciaTest extends TestCase
         $this->assertSame("'-1", E::celulaCsv('-1'));
         $this->assertSame('Equipe A', E::celulaCsv('Equipe A'));
     }
+
+    public function testLinhasDeExportacaoSeguemOCabecalho(): void
+    {
+        $linhas = E::linhasExportacao([
+            ['nome' => 'Ana', 'enviadas' => 10, 'aceitas_envio' => 6, 'em_aberto' => 1, 'taxa' => 0.6, 'aceitas' => 5, 'recorrente' => 18400.0, 'pontual' => 2000.5, 'por_unidade' => 1],
+            ['nome' => 'Bruno', 'enviadas' => 0, 'aceitas_envio' => 0, 'em_aberto' => 0, 'taxa' => null, 'aceitas' => 0, 'recorrente' => 0.0, 'pontual' => 0.0, 'por_unidade' => 0],
+        ]);
+
+        $this->assertCount(count(E::CABECALHO_EXPORTACAO), $linhas[0]);
+        // Valores crus: quem formata é cada formato de saída (a planilha precisa de números).
+        $this->assertSame(['Ana', 10, 6, 1, 0.6, 5, 18400.0, 2000.5, 1], $linhas[0]);
+        $this->assertSame(['Bruno', 0, 0, 0, null, 0, 0.0, 0.0, 0], $linhas[1]);
+        $this->assertSame(E::COLUNA_TAXA, array_search(0.6, $linhas[0], true));
+    }
 }
