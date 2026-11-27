@@ -130,6 +130,21 @@ final class Equipe
         return array_values(array_unique(array_column(self::vinculos(), 'users_id')));
     }
 
+    /**
+     * Membros (consultores e Responsáveis) de cada equipe.
+     *
+     * @return array<int, list<int>> chave = id do grupo
+     */
+    public static function membrosPorEquipe(): array
+    {
+        $por_equipe = [];
+        foreach (self::vinculos() as $v) {
+            $por_equipe[$v['groups_id']][] = $v['users_id'];
+        }
+
+        return array_map(static fn (array $ids): array => array_values(array_unique($ids)), $por_equipe);
+    }
+
     public static function usuarioEmEquipe(int $users_id): bool
     {
         return $users_id > 0 && self::vinculos(['users_id' => $users_id]) !== [];

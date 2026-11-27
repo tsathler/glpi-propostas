@@ -22,6 +22,7 @@
             <file>src/Cnpj.php</file>
             <file>src/Visibilidade.php</file>
             <file>src/Marca.php</file>
+            <file>src/Eficiencia.php</file>
         </include>
     </source>
 </phpunit>
