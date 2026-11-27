@@ -420,6 +420,21 @@
                   </p>
                {% endif %}
 
+               {% if acessos %}
+                  <div class="small mb-2">
+                     {% if acessos.vistas > 0 %}
+                        <i class="ti ti-eye-check text-success"></i>
+                        {{ __('Visto pelo cliente pela primeira vez em', 'propostas') }} {{ acessos.primeira|formatted_datetime }}{% if acessos.vistas > 1 %}; {{ __('último acesso em', 'propostas') }} {{ acessos.ultima|formatted_datetime }} ({{ acessos.vistas }} {{ __('acessos', 'propostas') }}){% endif %}.
+                     {% elseif acessos.aberturas > 0 %}
+                        <i class="ti ti-eye-question text-warning"></i>
+                        {{ __('O link foi aberto, mas a página não confirmou que o cliente viu: pode ter sido o filtro de links do e-mail ou a prévia de um mensageiro.', 'propostas') }}
+                     {% else %}
+                        <i class="ti ti-eye-off text-secondary"></i>
+                        {{ __('O cliente ainda não abriu o link.', 'propostas') }}
+                     {% endif %}
+                  </div>
+               {% endif %}
+
                <div class="d-flex flex-wrap gap-2">
                   {% if pode_gerar %}
                      <button type="submit" name="gerar_link" value="1" class="btn btn-primary">

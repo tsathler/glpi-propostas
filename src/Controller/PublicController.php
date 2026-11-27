@@ -7,9 +7,10 @@
  *        POST /plugins/propostas/p/{token}/aceitar
  *        POST /plugins/propostas/p/{token}/duvida
  *        GET  /plugins/propostas/p/{token}/csrf (token anti-falsificação novo, pedido pela página antes de enviar)
+ *        POST /plugins/propostas/p/{token}/visto (a página confirma que foi vista; muda Enviada -> Visualizada)
  *        qualquer outro /plugins/propostas/p/... -> aviso "Proposta não encontrada" (404)
  * Para acesso externo, exponha só estas rotas (exemplo de Nginx no README).
- * Os POST passam pela checagem de CSRF do próprio GLPI (campo _glpi_csrf_token).
+ * Os POST passam pela checagem de CSRF do próprio GLPI (campo _glpi_csrf_token; no /visto, o cabeçalho X-Glpi-Csrf-Token).
  *
  * @license GPL-3.0-or-later https://www.gnu.org/licenses/gpl-3.0.html
  */
@@ -54,7 +55,7 @@ final class PublicController extends AbstractController
         // Prévia de link (WhatsApp, Teams, Slack...) não é o cliente abrindo a proposta.
         $user_agent = (string) $request->headers->get('User-Agent', '');
         if (!Acesso::ehRobo($user_agent)) {
-            $proposta->registrarVisualizacao((string) $request->getClientIp(), $user_agent);
+            $proposta->registrarAbertura((string) $request->getClientIp(), $user_agent);
         }
 
         return $this->paginaProposta($proposta, $token, [
@@ -114,6 +115,27 @@ final class PublicController extends AbstractController
         }
 
         return new JsonResponse(['token' => \Session::getNewCSRFToken()], Response::HTTP_OK, ['Cache-Control' => 'no-store, private']);
+    }
+
+    /**
+     * A página avisa que foi vista de verdade (ficou visível na tela por alguns segundos ou foi rolada).
+     * Filtro de links do e-mail e prévias pedem o endereço, mas não rodam o JavaScript da página.
+     */
+    // Sem "methods": ver o comentário de aceitar().
+    #[Route('/p/{token}/visto', name: 'proposta_visto', requirements: ['token' => self::TOKEN])]
+    #[SecurityStrategy(Firewall::STRATEGY_NO_CHECK)]
+    public function visto(Request $request, string $token): Response
+    {
+        $proposta = Proposta::buscarPorToken($token);
+        if (!$request->isMethod(Request::METHOD_POST) || $proposta === null || $proposta->isLinkExpirado()) {
+            return new Response(status: Response::HTTP_NOT_FOUND);
+        }
+        $user_agent = (string) $request->headers->get('User-Agent', '');
+        if (!Acesso::ehRobo($user_agent)) {
+            $proposta->confirmarVisualizacao((string) $request->getClientIp(), $user_agent);
+        }
+
+        return new Response(status: Response::HTTP_NO_CONTENT, headers: ['Cache-Control' => 'no-store, private']);
     }
 
     // Sem "methods": ver o comentário de aceitar().
@@ -244,6 +266,9 @@ final class PublicController extends AbstractController
             'acao_aceite' => $this->caminho($token) . '/aceitar#responder',
             'acao_duvida' => $this->caminho($token) . '/duvida#responder',
             'acao_csrf'   => $this->caminho($token) . '/csrf',
+            // Só enquanto o cliente ainda não viu (status Enviada): depois disso a página não avisa mais.
+            'acao_visto'  => $proposta->fields['status'] === Proposta::STATUS_ENVIADA ? $this->caminho($token) . '/visto' : null,
+            'visto_csrf'  => $proposta->fields['status'] === Proposta::STATUS_ENVIADA ? \Session::getNewCSRFToken() : null,
             'form_aberto' => null,
             'erros'       => [],
             'valores'     => [],

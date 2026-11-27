@@ -136,6 +136,13 @@ function plugin_propostas_install(): bool
         'state'   => CronTask::STATE_WAITING,
     ]);
 
+    // 1.10.0: ação automática diária que lembra o consultor (proposta não vista ou perto de vencer).
+    CronTask::register('GlpiPlugin\\Propostas\\Proposta', 'lembrar', DAY_TIMESTAMP, [
+        'comment' => 'Avisa o consultor de proposta ainda não vista pelo cliente ou perto de vencer',
+        'mode'    => CronTask::MODE_EXTERNAL,
+        'state'   => CronTask::STATE_WAITING,
+    ]);
+
     // 1.8.0: ação automática diária que apaga IP e navegador antigos (LGPD).
     CronTask::register('GlpiPlugin\\Propostas\\Acesso', 'limpar', DAY_TIMESTAMP, [
         'comment' => 'Apaga IP e navegador de acessos e dúvidas mais antigos que o prazo configurado (LGPD)',
@@ -320,6 +327,16 @@ function plugin_propostas_install(): bool
         $migration->migrationOneTable($table);
     }
 
+    // 1.10.0: visualização confirmada pela página (não só o endereço pedido) e lembretes ao consultor.
+    $table = 'glpi_plugin_propostas_acessos';
+    $migration->addField($table, 'visto', 'bool', ['after' => 'user_agent']);
+    $migration->migrationOneTable($table);
+    $table = 'glpi_plugin_propostas_propostas';
+    $migration->addField($table, 'link_gerado_em', 'timestamp', ['after' => 'token_expira']);
+    $migration->addField($table, 'lembrete_nao_vista', 'timestamp', ['after' => 'link_gerado_em']);
+    $migration->addField($table, 'lembrete_vencendo', 'timestamp', ['after' => 'lembrete_nao_vista']);
+    $migration->migrationOneTable($table);
+
     // Colunas padrão das listas, só se a lista ainda não tiver nenhuma.
     // Números = ids do rawSearchOptions() de cada classe.
     $colunas = [
@@ -441,7 +458,7 @@ function plugin_propostas_uninstall(): bool
     Config::deleteConfigurationValues('plugin:propostas', [
         'url_publica', 'cnpj_consulta_ativa', 'cnpj_consulta_url', 'chamado_itilcategories_id', 'chamado_groups_id',
         'instalado_notificacoes', 'instalado_colunas_1_1',
-        'equipes_groups_id', 'propostas_entities_id', 'instalado_niveis_leitura', 'instalado_notificacoes_equipes',
+        'equipes_groups_id', 'propostas_entities_id', 'instalado_niveis_leitura', 'instalado_notificacoes_equipes', 'instalado_notificacoes_lembretes',
         'marca_cor_principal', 'marca_cor_destaque', 'marca_rodape', 'campo_nome_ativo', 'campo_condicoes_ativo', 'aviso_privacidade', 'retencao_dias',
     ]);
     // Logotipo da página do cliente (pasta de arquivos do plugin).

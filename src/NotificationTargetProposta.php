@@ -3,7 +3,7 @@
 /**
  * Propostas - notificações (Configurar > Notificações).
  *
- * Eventos: aberta (primeira abertura pelo cliente), aceita, duvida, expirada.
+ * Eventos: aberta (cliente viu pela primeira vez), aceita, duvida, expirada e os lembretes nao_vista e vencendo.
  * Destinatários próprios: o consultor da proposta e o gestor da equipe atual do consultor.
  *
  * @license GPL-3.0-or-later https://www.gnu.org/licenses/gpl-3.0.html
@@ -34,6 +34,8 @@ class NotificationTargetProposta extends NotificationTarget
             'aceita'   => __('Proposta aceita pelo cliente', 'propostas'),
             'duvida'   => __('Dúvida do cliente sobre a proposta', 'propostas'),
             'expirada' => __('Proposta expirada', 'propostas'),
+            'nao_vista' => __('Proposta ainda não vista pelo cliente', 'propostas'),
+            'vencendo'  => __('Proposta perto de vencer', 'propostas'),
         ];
     }
 
@@ -149,10 +151,13 @@ class NotificationTargetProposta extends NotificationTarget
 
         // Só na primeira instalação: reinstalar (--force) não recria notificação apagada nem
         // duplica o modelo renomeado pelo administrador.
-        $marca = \Config::getConfigurationValues('plugin:propostas', ['instalado_notificacoes', 'instalado_notificacoes_equipes']);
+        $marca = \Config::getConfigurationValues('plugin:propostas', ['instalado_notificacoes', 'instalado_notificacoes_equipes', 'instalado_notificacoes_lembretes']);
         if (!empty($marca['instalado_notificacoes'])) {
             if (empty($marca['instalado_notificacoes_equipes'])) {
                 self::instalarEquipes();
+            }
+            if (empty($marca['instalado_notificacoes_lembretes'])) {
+                self::instalarLembretes();
             }
             return;
         }
@@ -193,7 +198,7 @@ class NotificationTargetProposta extends NotificationTarget
         // Notificações que já existiam (atualização de versão sem marcador) recebem o Gestor também.
         // Marcadores só depois de tudo criado.
         self::instalarEquipes();
-        \Config::setConfigurationValues('plugin:propostas', ['instalado_notificacoes' => '1', 'instalado_notificacoes_equipes' => '1']);
+        \Config::setConfigurationValues('plugin:propostas', ['instalado_notificacoes' => '1', 'instalado_notificacoes_equipes' => '1', 'instalado_notificacoes_lembretes' => '1']);
     }
 
     /** Nomes das notificações criadas na instalação (um por evento). */
@@ -202,6 +207,8 @@ class NotificationTargetProposta extends NotificationTarget
         'aceita'   => 'Proposta aceita pelo cliente',
         'duvida'   => 'Dúvida do cliente sobre a proposta',
         'expirada' => 'Proposta expirada',
+        'nao_vista' => 'Proposta ainda não vista pelo cliente',
+        'vencendo'  => 'Proposta perto de vencer',
     ];
 
     /**
@@ -253,14 +260,7 @@ class NotificationTargetProposta extends NotificationTarget
         \Config::setConfigurationValues('plugin:propostas', ['instalado_notificacoes_equipes' => '1']);
         $itemtype = Proposta::class;
 
-        $modelo = $DB->request([
-            'SELECT' => ['id'],
-            'FROM'   => NotificationTemplate::getTable(),
-            'WHERE'  => ['itemtype' => $itemtype],
-            'ORDER'  => 'id',
-            'LIMIT'  => 1,
-        ])->current();
-        self::criarNotificacao('expirada', self::NOMES['expirada'], (int) ($modelo['id'] ?? 0));
+        self::criarNotificacao('expirada', self::NOMES['expirada'], self::modeloExistente());
 
         foreach ($DB->request(['SELECT' => ['id'], 'FROM' => Notification::getTable(), 'WHERE' => ['itemtype' => $itemtype]]) as $row) {
             $ja_tem = countElementsInTable('glpi_notificationtargets', [
@@ -276,6 +276,34 @@ class NotificationTargetProposta extends NotificationTarget
                 ]);
             }
         }
+    }
+
+    /**
+     * Atualização para a 1.10.0, uma vez só: as notificações dos lembretes, com o modelo do plugin.
+     * Não recria o que foi apagado.
+     */
+    private static function instalarLembretes(): void
+    {
+        \Config::setConfigurationValues('plugin:propostas', ['instalado_notificacoes_lembretes' => '1']);
+        foreach (['nao_vista', 'vencendo'] as $evento) {
+            self::criarNotificacao($evento, self::NOMES[$evento], self::modeloExistente());
+        }
+    }
+
+    /** Primeiro modelo de notificação do plugin (o administrador pode tê-lo renomeado). */
+    private static function modeloExistente(): int
+    {
+        global $DB;
+
+        $modelo = $DB->request([
+            'SELECT' => ['id'],
+            'FROM'   => NotificationTemplate::getTable(),
+            'WHERE'  => ['itemtype' => Proposta::class],
+            'ORDER'  => 'id',
+            'LIMIT'  => 1,
+        ])->current();
+
+        return (int) ($modelo['id'] ?? 0);
     }
 
     public static function desinstalar(): void

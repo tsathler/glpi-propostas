@@ -16,6 +16,7 @@
                   <th>{{ __('Versão', 'propostas') }}</th>
                   <th>{{ __('IP', 'propostas') }}</th>
                   <th>{{ __('Navegador', 'propostas') }}</th>
+                  <th title="{{ __('A página confirmou que ficou na tela ou foi rolada. Sem isso, pode ter sido o filtro de links do e-mail ou uma prévia.', 'propostas') }}">{{ __('Visto', 'propostas') }}</th>
                </tr>
             </thead>
             <tbody>
@@ -25,6 +26,7 @@
                      <td>{{ l.versao }}</td>
                      <td>{{ l.ip }}</td>
                      <td class="small text-muted">{{ l.user_agent }}</td>
+                     <td>{% if l.visto %}<i class="ti ti-check text-success"></i> {{ __('Sim') }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                   </tr>
                {% endfor %}
             </tbody>

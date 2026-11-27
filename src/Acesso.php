@@ -10,6 +10,7 @@ namespace GlpiPlugin\Propostas;
 
 use CommonGLPI;
 use Glpi\Application\View\TemplateRenderer;
+use Glpi\DBAL\QueryExpression;
 use Session;
 
 class Acesso extends CommonGLPI
@@ -108,17 +109,25 @@ class Acesso extends CommonGLPI
         return $total > 0 ? 1 : 0;
     }
 
-    public static function registrar(int $propostas_id, int $versao, string $ip, string $user_agent): void
+    /**
+     * Uma linha por IP a cada 10 minutos. $visto = a página confirmou que foi vista (marca também a
+     * linha da abertura, gravada segundos antes).
+     */
+    public static function registrar(int $propostas_id, int $versao, string $ip, string $user_agent, bool $visto = false): void
     {
         global $DB;
 
         $ip = mb_substr($ip, 0, 45);
-        if (countElementsInTable(self::TABELA, [
+        $recente = [
             'plugin_propostas_propostas_id' => $propostas_id,
             'versao'                        => $versao,
             'ip'                            => $ip,
             'date_creation'                 => ['>=', date('Y-m-d H:i:s', time() - self::INTERVALO_MINUTOS * MINUTE_TIMESTAMP)],
-        ]) > 0) {
+        ];
+        if (countElementsInTable(self::TABELA, $recente) > 0) {
+            if ($visto) {
+                $DB->update(self::TABELA, ['visto' => 1], $recente);
+            }
             return;
         }
 
@@ -127,8 +136,37 @@ class Acesso extends CommonGLPI
             'versao'                        => $versao,
             'ip'                            => $ip,
             'user_agent'                    => mb_substr(mb_scrub($user_agent, 'UTF-8'), 0, 255),
+            'visto'                         => (int) $visto,
             'date_creation'                 => Session::getCurrentTime() ?? date('Y-m-d H:i:s'),
         ]);
+    }
+
+    /**
+     * Resumo da versão atual para o formulário: aberturas do link e visualizações confirmadas.
+     *
+     * @return array{aberturas: int, vistas: int, primeira: ?string, ultima: ?string}
+     */
+    public static function resumo(int $propostas_id, int $versao): array
+    {
+        global $DB;
+
+        $row = $DB->request([
+            'SELECT' => [
+                new QueryExpression('COUNT(*) AS aberturas'),
+                new QueryExpression('COALESCE(SUM(' . $DB->quoteName('visto') . '), 0) AS vistas'),
+                new QueryExpression('MIN(CASE WHEN ' . $DB->quoteName('visto') . ' = 1 THEN ' . $DB->quoteName('date_creation') . ' END) AS primeira'),
+                new QueryExpression('MAX(CASE WHEN ' . $DB->quoteName('visto') . ' = 1 THEN ' . $DB->quoteName('date_creation') . ' END) AS ultima'),
+            ],
+            'FROM'   => self::TABELA,
+            'WHERE'  => ['plugin_propostas_propostas_id' => $propostas_id, 'versao' => $versao],
+        ])->current();
+
+        return [
+            'aberturas' => (int) ($row['aberturas'] ?? 0),
+            'vistas'    => (int) ($row['vistas'] ?? 0),
+            'primeira'  => $row['primeira'] ?? null,
+            'ultima'    => $row['ultima'] ?? null,
+        ];
     }
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
